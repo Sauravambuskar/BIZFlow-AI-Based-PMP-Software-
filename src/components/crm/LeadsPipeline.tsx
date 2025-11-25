@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { showSuccess } from "@/utils/toast";
 import LeadEditorDialog from "./LeadEditorDialog";
+import { exportToCsv } from "@/utils/export";
 
 type Lead = { id: string; name: string; amount: number };
 type Stage = "new" | "qualified" | "proposal" | "won" | "lost";
@@ -111,10 +112,25 @@ const LeadsPipeline: React.FC = () => {
   const [name, setName] = React.useState("");
   const [amount, setAmount] = React.useState<string>("");
   const [editingId, setEditingId] = React.useState<string | null>(null);
+  const [query, setQuery] = React.useState("");
 
   React.useEffect(() => {
     localStorage.setItem(LS_KEY, JSON.stringify(pipeline));
   }, [pipeline]);
+
+  const filteredPipeline = React.useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return pipeline;
+    const filterLeads = (arr: Lead[]) =>
+      arr.filter((l) => l.name.toLowerCase().includes(q) || String(l.amount).includes(q));
+    return {
+      new: filterLeads(pipeline.new),
+      qualified: filterLeads(pipeline.qualified),
+      proposal: filterLeads(pipeline.proposal),
+      won: filterLeads(pipeline.won),
+      lost: filterLeads(pipeline.lost),
+    } as PipelineState;
+  }, [pipeline, query]);
 
   const moveLead = (leadId: string, from: Stage, to: Stage) => {
     if (from === to) return;
@@ -177,8 +193,21 @@ const LeadsPipeline: React.FC = () => {
     const all = (Object.keys(pipeline) as Stage[]).flatMap((s) => pipeline[s]);
     const total = all.reduce((s, l) => s + l.amount, 0);
     const openTotal = (pipeline.new.concat(pipeline.qualified, pipeline.proposal)).reduce((s, l) => s + l.amount, 0);
-    return { total, openTotal };
+    const wonTotal = pipeline.won.reduce((s, l) => s + l.amount, 0);
+    const wonCount = pipeline.won.length;
+    const lostCount = pipeline.lost.length;
+    return { total, openTotal, wonTotal, wonCount, lostCount };
   }, [pipeline]);
+
+  const flattenForCsv = (state: PipelineState) => {
+    const rows: { stage: string; name: string; amount: number }[] = [];
+    (Object.keys(state) as Stage[]).forEach((s) => {
+      state[s].forEach((l) => rows.push({ stage: stageMeta[s].label, name: l.name, amount: l.amount }));
+    });
+    return rows;
+  };
+  const exportAll = () => exportToCsv("leads-all.csv", flattenForCsv(pipeline));
+  const exportFilteredCsv = () => exportToCsv("leads-filtered.csv", flattenForCsv(filteredPipeline));
 
   const editingLead =
     editingId
@@ -215,16 +244,41 @@ const LeadsPipeline: React.FC = () => {
             Clear Lost
           </Button>
         </div>
+        <div className="grid gap-2 sm:grid-cols-[1fr,auto,auto]">
+          <Input
+            placeholder="Search leads (name or amount)"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          <Button variant="outline" onClick={exportFilteredCsv} className="whitespace-nowrap">
+            Export Filtered CSV
+          </Button>
+          <Button variant="outline" onClick={exportAll} className="whitespace-nowrap">
+            Export All CSV
+          </Button>
+        </div>
         <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
           <span>Total Pipeline: ${totals.total.toLocaleString()}</span>
           <span>Open (New+Qualified+Proposal): ${totals.openTotal.toLocaleString()}</span>
+          <span>Won: ${totals.wonTotal.toLocaleString()} ({totals.wonCount})</span>
+          <span>Lost: {totals.lostCount}</span>
+          {query.trim() ? (
+            <span>
+              Filtered: {
+                (Object.keys(filteredPipeline) as Stage[]).reduce((s, k) => s + filteredPipeline[k].length, 0)
+              } leads
+            </span>
+          ) : null}
         </div>
         <div className="grid gap-3 md:grid-cols-5">
+          {/*
+            Show filtered view when searching, otherwise full pipeline.
+          */}
           {(Object.keys(stageMeta) as Stage[]).map((s) => (
             <Column
               key={s}
               stage={s}
-              leads={pipeline[s]}
+              leads={query.trim() ? filteredPipeline[s] : pipeline[s]}
               onDropLead={moveLead}
               onEdit={(id) => setEditingId(id)}
               onDelete={deleteLead}
