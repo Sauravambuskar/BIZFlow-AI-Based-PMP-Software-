@@ -18,6 +18,9 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { financeData } from "../../data/finance.ts";
 
+type FinanceRow = { month: string; income: number; expenses: number };
+type FinanceChartProps = { data?: FinanceRow[] };
+
 const chartConfig: ChartConfig = {
   income: {
     label: "Income",
@@ -29,7 +32,8 @@ const chartConfig: ChartConfig = {
   },
 };
 
-const FinanceChart: React.FC = () => {
+const FinanceChart: React.FC<FinanceChartProps> = ({ data }) => {
+  const chartData = data ?? financeData;
   return (
     <Card className="h-full">
       <CardHeader>
@@ -38,7 +42,7 @@ const FinanceChart: React.FC = () => {
       <CardContent className="pt-2">
         <ChartContainer config={chartConfig} className="w-full">
           <AreaChart
-            data={financeData}
+            data={chartData}
             margin={{ left: 12, right: 12 }}
           >
             <defs>
