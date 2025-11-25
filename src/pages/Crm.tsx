@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, UserPlus, Tags } from "lucide-react";
 import { showSuccess } from "@/utils/toast";
+import CustomersTable from "@/components/crm/CustomersTable";
 
 const Crm: React.FC = () => {
   return (
@@ -56,6 +57,8 @@ const Crm: React.FC = () => {
             </CardContent>
           </Card>
         </div>
+
+        <CustomersTable />
       </div>
     </AppLayout>
   );
