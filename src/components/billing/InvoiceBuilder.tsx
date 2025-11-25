@@ -41,6 +41,97 @@ const InvoiceBuilder: React.FC = () => {
   };
   const saveDraft = () => showSuccess("Invoice draft saved");
 
+  const makePrintableHtml = (rows: Item[]) => {
+    const subtotalP = rows.reduce((s, i) => s + i.qty * i.rate, 0);
+    const taxTotalP = rows.reduce((s, i) => s + (i.qty * i.rate * i.tax) / 100, 0);
+    const totalP = subtotalP + taxTotalP;
+    const currency = (n: number) => `₹${n.toFixed(2)}`;
+
+    const itemsHtml = rows
+      .map(
+        (i) => `
+        <tr>
+          <td style="padding:8px;border-bottom:1px solid #eee;">${i.description || "-"}</td>
+          <td style="padding:8px;border-bottom:1px solid #eee;text-align:right;">${i.qty}</td>
+          <td style="padding:8px;border-bottom:1px solid #eee;text-align:right;">${currency(i.rate)}</td>
+          <td style="padding:8px;border-bottom:1px solid #eee;text-align:right;">${i.tax}%</td>
+          <td style="padding:8px;border-bottom:1px solid #eee;text-align:right;">${currency(i.qty * i.rate)}</td>
+        </tr>`
+      )
+      .join("");
+
+    return `
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Invoice</title>
+    <style>
+      body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; color:#0f172a; }
+      .container { max-width: 800px; margin: 0 auto; padding: 24px; }
+      .header { display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; }
+      .brand { font-size:20px; font-weight:600; }
+      .muted { color:#64748b; font-size:12px; }
+      table { width:100%; border-collapse:collapse; margin-top:12px; }
+      th { text-align:left; padding:8px; background:#f8fafc; border-bottom:1px solid #e2e8f0; font-size:12px; color:#475569; }
+      tfoot td { padding:8px; }
+      .totals { width: 320px; margin-left:auto; }
+      .right { text-align:right; }
+      @media print {
+        @page { size: A4; margin: 16mm; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <div class="brand">Invoice</div>
+        <div class="muted">${new Date().toLocaleDateString()}</div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Description</th>
+            <th class="right">Qty</th>
+            <th class="right">Rate</th>
+            <th class="right">Tax %</th>
+            <th class="right">Line Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${itemsHtml}
+        </tbody>
+      </table>
+      <table class="totals" style="margin-top:16px;">
+        <tbody>
+          <tr><td>Subtotal</td><td class="right">${currency(subtotalP)}</td></tr>
+          <tr><td>Tax</td><td class="right">${currency(taxTotalP)}</td></tr>
+          <tr><td style="font-weight:700;">Total</td><td class="right" style="font-weight:700;">${currency(totalP)}</td></tr>
+        </tbody>
+      </table>
+      <p class="muted" style="margin-top:24px;">Thank you for your business.</p>
+    </div>
+  </body>
+</html>`;
+  };
+
+  const exportPdf = () => {
+    showSuccess("Preparing PDF...");
+    const html = makePrintableHtml(items);
+    const w = window.open("", "print", "width=900,height=1000");
+    if (!w) return;
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+    w.focus();
+    // Print after a short delay to ensure styles render
+    setTimeout(() => {
+      w.print();
+      w.close();
+    }, 200);
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -115,6 +206,9 @@ const InvoiceBuilder: React.FC = () => {
           <Button onClick={saveDraft}>Save Draft</Button>
           <Button variant="secondary" onClick={exportCsv}>
             Export CSV
+          </Button>
+          <Button variant="outline" onClick={exportPdf}>
+            Export PDF
           </Button>
         </div>
       </CardContent>
