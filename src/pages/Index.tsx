@@ -1,18 +1,158 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+"use client";
 
-import { MadeWithDyad } from "@/components/made-with-dyad";
+import React from "react";
+import BrandHeader from "@/components/BrandHeader";
+import KpiCard from "@/components/dashboard/KpiCard";
+import FinanceChart from "@/components/dashboard/FinanceChart";
+import RecentActivity from "@/components/dashboard/RecentActivity";
+import QuickActions from "@/components/dashboard/QuickActions";
+import {
+  SidebarProvider,
+  Sidebar,
+  SidebarContent,
+  SidebarHeader,
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarInset,
+  SidebarSeparator,
+  SidebarFooter,
+  SidebarMenuBadge,
+  SidebarMenuAction,
+} from "@/components/ui/sidebar";
+import {
+  LayoutDashboard,
+  Users,
+  FolderKanban,
+  Receipt,
+  BarChart3,
+  Settings,
+  TrendingUp,
+  TrendingDown,
+  Wallet,
+  TimerReset,
+} from "lucide-react";
 
-const Index = () => {
+const Index: React.FC = () => {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-gray-600">
-          Start building your amazing project here!
-        </p>
-      </div>
-      <MadeWithDyad />
-    </div>
+    <SidebarProvider defaultOpen>
+      <Sidebar variant="floating">
+        <SidebarHeader>
+          <SidebarGroupLabel className="font-semibold">Main</SidebarGroupLabel>
+        </SidebarHeader>
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton isActive tooltip="Dashboard">
+                  <LayoutDashboard />
+                  <span>Dashboard</span>
+                  <SidebarMenuBadge>4</SidebarMenuBadge>
+                </SidebarMenuButton>
+                <SidebarMenuAction aria-label="Pin" title="Pin" />
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton tooltip="CRM">
+                  <Users />
+                  <span>CRM</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton tooltip="Projects">
+                  <FolderKanban />
+                  <span>Projects</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton tooltip="Billing">
+                  <Receipt />
+                  <span>Billing</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton tooltip="Reports">
+                  <BarChart3 />
+                  <span>Reports</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroup>
+          <SidebarSeparator />
+          <SidebarGroup>
+            <SidebarGroupLabel className="font-semibold">Settings</SidebarGroupLabel>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton tooltip="Preferences">
+                  <Settings />
+                  <span>Preferences</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroup>
+        </SidebarContent>
+        <SidebarFooter>
+          <div className="text-xs text-muted-foreground px-2">Powered by BizFlow</div>
+        </SidebarFooter>
+      </Sidebar>
+
+      <SidebarInset>
+        <BrandHeader />
+        <div className="p-4 md:p-6 space-y-6">
+          {/* KPI Cards */}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <KpiCard
+              title="Monthly Revenue"
+              value="₹18,000"
+              delta="+14.2%"
+              trend="up"
+              subtitle="vs last month"
+              icon={<TrendingUp />}
+              className="bg-gradient-to-br from-indigo-600 via-fuchsia-500 to-rose-500"
+            />
+            <KpiCard
+              title="Expenses"
+              value="₹11,500"
+              delta="+5.1%"
+              trend="up"
+              subtitle="vs last month"
+              icon={<TrendingDown />}
+              className="bg-gradient-to-br from-rose-500 via-orange-500 to-amber-500"
+            />
+            <KpiCard
+              title="Net Profit"
+              value="₹6,500"
+              delta="+9.8%"
+              trend="up"
+              subtitle="margin 36%"
+              icon={<Wallet />}
+              className="bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500"
+            />
+            <KpiCard
+              title="Overdue Invoices"
+              value="4"
+              delta="-20%"
+              trend="down"
+              subtitle="this month"
+              icon={<TimerReset />}
+              className="bg-gradient-to-br from-sky-500 via-indigo-500 to-violet-600"
+            />
+          </div>
+
+          {/* Chart + Activity + Actions */}
+          <div className="grid gap-4 lg:grid-cols-3">
+            <div className="lg:col-span-2">
+              <FinanceChart />
+            </div>
+            <div className="space-y-4">
+              <RecentActivity />
+              <QuickActions />
+            </div>
+          </div>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 };
 
