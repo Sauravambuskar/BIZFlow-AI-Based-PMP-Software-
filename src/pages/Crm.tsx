@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, UserPlus, Tags } from "lucide-react";
 import { showSuccess } from "@/utils/toast";
 import CustomersTable from "@/components/crm/CustomersTable";
+import LeadsPipeline from "@/components/crm/LeadsPipeline";
 
 const Crm: React.FC = () => {
   return (
@@ -30,16 +31,7 @@ const Crm: React.FC = () => {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Leads Pipeline</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
-                Kanban pipeline coming soon (Stages, owners, reminders).
-              </div>
-            </CardContent>
-          </Card>
+          <LeadsPipeline />
 
           <Card>
             <CardHeader>
