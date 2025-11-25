@@ -16,6 +16,7 @@ import {
   CartesianGrid,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { financeData } from "../../data/finance.ts";
 
 const chartConfig: ChartConfig = {
   income: {
@@ -28,15 +29,6 @@ const chartConfig: ChartConfig = {
   },
 };
 
-const data = [
-  { month: "Jan", income: 12000, expenses: 8500 },
-  { month: "Feb", income: 14000, expenses: 9000 },
-  { month: "Mar", income: 13500, expenses: 9200 },
-  { month: "Apr", income: 16000, expenses: 11000 },
-  { month: "May", income: 15500, expenses: 10000 },
-  { month: "Jun", income: 18000, expenses: 11500 },
-];
-
 const FinanceChart: React.FC = () => {
   return (
     <Card className="h-full">
@@ -46,7 +38,7 @@ const FinanceChart: React.FC = () => {
       <CardContent className="pt-2">
         <ChartContainer config={chartConfig} className="w-full">
           <AreaChart
-            data={data}
+            data={financeData}
             margin={{ left: 12, right: 12 }}
           >
             <defs>

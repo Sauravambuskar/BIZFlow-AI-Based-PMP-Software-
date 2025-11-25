@@ -3,6 +3,7 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import BrandHeader from "@/components/BrandHeader";
+import CommandMenu from "@/components/CommandMenu";
 import {
   SidebarProvider,
   Sidebar,
@@ -98,6 +99,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
       <SidebarInset>
         <BrandHeader />
+        <CommandMenu />
         <div className="p-4 md:p-6 space-y-6">{children}</div>
       </SidebarInset>
     </SidebarProvider>

@@ -4,6 +4,9 @@ import React from "react";
 import AppLayout from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import FinanceChart from "@/components/dashboard/FinanceChart";
+import { Button } from "@/components/ui/button";
+import { exportToCsv } from "@/utils/export";
+import { financeData } from "../data/finance.ts";
 
 const Reports: React.FC = () => {
   return (
@@ -22,7 +25,13 @@ const Reports: React.FC = () => {
             <CardHeader>
               <CardTitle>Download Reports</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-3">
+              <Button
+                onClick={() => exportToCsv("finance-report.csv", financeData)}
+                className="w-full"
+              >
+                Export Finance CSV
+              </Button>
               <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
                 Export CSV/PDF will be available here.
               </div>
