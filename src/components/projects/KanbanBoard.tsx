@@ -4,8 +4,9 @@ import React from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import { showSuccess } from "@/utils/toast";
+import TaskEditorDialog from "./TaskEditorDialog";
 
 type Task = { id: string; title: string };
 type Columns = "todo" | "doing" | "done";
@@ -27,7 +28,9 @@ const Column: React.FC<{
   name: Columns;
   tasks: Task[];
   onDropTask: (taskId: string, from: Columns, to: Columns) => void;
-}> = ({ label, name, tasks, onDropTask }) => {
+  onEditTask: (taskId: string) => void;
+  onDeleteTask: (taskId: string) => void;
+}> = ({ label, name, tasks, onDropTask, onEditTask, onDeleteTask }) => {
   const onDrop = (e: React.DragEvent) => {
     const taskId = e.dataTransfer.getData("taskId");
     const from = e.dataTransfer.getData("from") as Columns;
@@ -53,9 +56,33 @@ const Column: React.FC<{
               e.dataTransfer.setData("taskId", t.id);
               e.dataTransfer.setData("from", name);
             }}
-            className="cursor-grab rounded-md border bg-card p-3 text-sm hover:bg-accent"
+            className="group cursor-grab rounded-md border bg-card p-3 text-sm hover:bg-accent"
           >
-            {t.title}
+            <div className="flex items-center justify-between gap-2">
+              <span className="truncate">{t.title}</span>
+              <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={() => onEditTask(t.id)}
+                  aria-label="Edit task"
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={() => onDeleteTask(t.id)}
+                  aria-label="Delete task"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
           </div>
         ))}
       </div>
@@ -69,6 +96,7 @@ const KanbanBoard: React.FC = () => {
     return raw ? (JSON.parse(raw) as BoardState) : initialState;
   });
   const [newTitle, setNewTitle] = React.useState("");
+  const [editingId, setEditingId] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     localStorage.setItem(LS_KEY, JSON.stringify(board));
@@ -93,6 +121,41 @@ const KanbanBoard: React.FC = () => {
     showSuccess("Task added");
   };
 
+  const findTaskColumn = (taskId: string): Columns | null => {
+    if (board.todo.some((t) => t.id === taskId)) return "todo";
+    if (board.doing.some((t) => t.id === taskId)) return "doing";
+    if (board.done.some((t) => t.id === taskId)) return "done";
+    return null;
+  };
+
+  const updateTaskTitle = (taskId: string, title: string) => {
+    const col = findTaskColumn(taskId);
+    if (!col) return;
+    setBoard((prev) => ({
+      ...prev,
+      [col]: prev[col].map((t) => (t.id === taskId ? { ...t, title } : t)),
+    }));
+    showSuccess("Task updated");
+  };
+
+  const deleteTask = (taskId: string) => {
+    const col = findTaskColumn(taskId);
+    if (!col) return;
+    setBoard((prev) => ({
+      ...prev,
+      [col]: prev[col].filter((t) => t.id !== taskId),
+    }));
+    showSuccess("Task deleted");
+    if (editingId === taskId) setEditingId(null);
+  };
+
+  const clearDone = () => {
+    const count = board.done.length;
+    if (count === 0) return;
+    setBoard((prev) => ({ ...prev, done: [] }));
+    showSuccess("Cleared done tasks");
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -109,12 +172,55 @@ const KanbanBoard: React.FC = () => {
             <Plus className="h-4 w-4" />
             Add
           </Button>
+          <Button variant="outline" onClick={clearDone}>
+            Clear Done
+          </Button>
         </div>
         <div className="grid gap-3 md:grid-cols-3">
-          <Column label="Todo" name="todo" tasks={board.todo} onDropTask={moveTask} />
-          <Column label="Doing" name="doing" tasks={board.doing} onDropTask={moveTask} />
-          <Column label="Done" name="done" tasks={board.done} onDropTask={moveTask} />
+          <Column
+            label="Todo"
+            name="todo"
+            tasks={board.todo}
+            onDropTask={moveTask}
+            onEditTask={(id) => setEditingId(id)}
+            onDeleteTask={deleteTask}
+          />
+          <Column
+            label="Doing"
+            name="doing"
+            tasks={board.doing}
+            onDropTask={moveTask}
+            onEditTask={(id) => setEditingId(id)}
+            onDeleteTask={deleteTask}
+          />
+          <Column
+            label="Done"
+            name="done"
+            tasks={board.done}
+            onDropTask={moveTask}
+            onEditTask={(id) => setEditingId(id)}
+            onDeleteTask={deleteTask}
+          />
         </div>
+        <TaskEditorDialog
+          open={!!editingId}
+          initialTitle={
+            editingId
+              ? (board.todo.find((t) => t.id === editingId) ||
+                 board.doing.find((t) => t.id === editingId) ||
+                 board.done.find((t) => t.id === editingId)
+                )?.title ?? ""
+              : ""
+          }
+          onOpenChange={(open) => {
+            if (!open) setEditingId(null);
+          }}
+          onSave={(title) => {
+            if (!editingId) return;
+            updateTaskTitle(editingId, title);
+            setEditingId(null);
+          }}
+        />
       </CardContent>
     </Card>
   );
