@@ -19,7 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { financeData } from "../../data/finance.ts";
 
 type FinanceRow = { month: string; income: number; expenses: number };
-type FinanceChartProps = { data?: FinanceRow[] };
+type FinanceChartProps = { data?: FinanceRow[]; showIncome?: boolean; showExpenses?: boolean };
 
 const chartConfig: ChartConfig = {
   income: {
@@ -32,7 +32,7 @@ const chartConfig: ChartConfig = {
   },
 };
 
-const FinanceChart: React.FC<FinanceChartProps> = ({ data }) => {
+const FinanceChart: React.FC<FinanceChartProps> = ({ data, showIncome = true, showExpenses = true }) => {
   const chartData = data ?? financeData;
   return (
     <Card className="h-full">
@@ -63,22 +63,26 @@ const FinanceChart: React.FC<FinanceChartProps> = ({ data }) => {
               tickMargin={8}
             />
             <ChartTooltip content={<ChartTooltipContent indicator="line" />} />
-            <Area
-              type="monotone"
-              dataKey="income"
-              stroke="var(--color-income)"
-              fill="url(#income)"
-              strokeWidth={2}
-              dot={false}
-            />
-            <Area
-              type="monotone"
-              dataKey="expenses"
-              stroke="var(--color-expenses)"
-              fill="url(#expenses)"
-              strokeWidth={2}
-              dot={false}
-            />
+            {showIncome && (
+              <Area
+                type="monotone"
+                dataKey="income"
+                stroke="var(--color-income)"
+                fill="url(#income)"
+                strokeWidth={2}
+                dot={false}
+              />
+            )}
+            {showExpenses && (
+              <Area
+                type="monotone"
+                dataKey="expenses"
+                stroke="var(--color-expenses)"
+                fill="url(#expenses)"
+                strokeWidth={2}
+                dot={false}
+              />
+            )}
             <ChartLegend content={<ChartLegendContent />} />
           </AreaChart>
         </ChartContainer>
