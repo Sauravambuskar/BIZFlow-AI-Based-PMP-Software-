@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { showSuccess } from "@/utils/toast";
 import TaskEditorDialog from "./TaskEditorDialog";
+import { exportToCsv } from "@/utils/export";
 
 type Task = { id: string; title: string };
 type Columns = "todo" | "doing" | "done";
@@ -103,10 +104,40 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ storageKey, title }) => {
   });
   const [newTitle, setNewTitle] = React.useState("");
   const [editingId, setEditingId] = React.useState<string | null>(null);
+  const [query, setQuery] = React.useState("");
 
   React.useEffect(() => {
     localStorage.setItem(key, JSON.stringify(board));
   }, [board, key]);
+
+  const filteredBoard = React.useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return board;
+    const filter = (arr: Task[]) => arr.filter((t) => t.title.toLowerCase().includes(q));
+    return {
+      todo: filter(board.todo),
+      doing: filter(board.doing),
+      done: filter(board.done),
+    } as BoardState;
+  }, [board, query]);
+
+  const totals = React.useMemo(() => {
+    const todo = board.todo.length;
+    const doing = board.doing.length;
+    const done = board.done.length;
+    const total = todo + doing + done;
+    return { total, todo, doing, done };
+  }, [board]);
+
+  const flattenForCsv = (state: BoardState) => {
+    return [
+      ...state.todo.map((t) => ({ column: "Todo", title: t.title })),
+      ...state.doing.map((t) => ({ column: "Doing", title: t.title })),
+      ...state.done.map((t) => ({ column: "Done", title: t.title })),
+    ];
+  };
+  const exportAll = () => exportToCsv("tasks-all.csv", flattenForCsv(board));
+  const exportFiltered = () => exportToCsv("tasks-filtered.csv", flattenForCsv(filteredBoard));
 
   const moveTask = (taskId: string, from: Columns, to: Columns) => {
     if (from === to) return;
@@ -182,11 +213,35 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ storageKey, title }) => {
             Clear Done
           </Button>
         </div>
+        <div className="grid gap-2 sm:grid-cols-[1fr,auto,auto]">
+          <Input
+            placeholder="Search tasks by title"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          <Button variant="outline" onClick={exportFiltered} className="whitespace-nowrap">
+            Export Filtered CSV
+          </Button>
+          <Button variant="outline" onClick={exportAll} className="whitespace-nowrap">
+            Export All CSV
+          </Button>
+        </div>
+        <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+          <span>Total: {totals.total}</span>
+          <span>Todo: {totals.todo}</span>
+          <span>Doing: {totals.doing}</span>
+          <span>Done: {totals.done}</span>
+          {query.trim() ? (
+            <span>
+              Filtered: {filteredBoard.todo.length + filteredBoard.doing.length + filteredBoard.done.length}
+            </span>
+          ) : null}
+        </div>
         <div className="grid gap-3 md:grid-cols-3">
           <Column
             label="Todo"
             name="todo"
-            tasks={board.todo}
+            tasks={query.trim() ? filteredBoard.todo : board.todo}
             onDropTask={moveTask}
             onEditTask={(id) => setEditingId(id)}
             onDeleteTask={deleteTask}
@@ -194,7 +249,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ storageKey, title }) => {
           <Column
             label="Doing"
             name="doing"
-            tasks={board.doing}
+            tasks={query.trim() ? filteredBoard.doing : board.doing}
             onDropTask={moveTask}
             onEditTask={(id) => setEditingId(id)}
             onDeleteTask={deleteTask}
@@ -202,7 +257,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ storageKey, title }) => {
           <Column
             label="Done"
             name="done"
-            tasks={board.done}
+            tasks={query.trim() ? filteredBoard.done : board.done}
             onDropTask={moveTask}
             onEditTask={(id) => setEditingId(id)}
             onDeleteTask={deleteTask}
