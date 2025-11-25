@@ -14,6 +14,11 @@ type BoardState = Record<Columns, Task[]>;
 
 const LS_KEY = "bizflow_kanban";
 
+type KanbanBoardProps = {
+  storageKey?: string;
+  title?: string;
+};
+
 const initialState: BoardState = {
   todo: [
     { id: "t1", title: "Setup project template" },
@@ -90,17 +95,18 @@ const Column: React.FC<{
   );
 };
 
-const KanbanBoard: React.FC = () => {
+const KanbanBoard: React.FC<KanbanBoardProps> = ({ storageKey, title }) => {
+  const key = storageKey ?? LS_KEY;
   const [board, setBoard] = React.useState<BoardState>(() => {
-    const raw = localStorage.getItem(LS_KEY);
+    const raw = localStorage.getItem(key);
     return raw ? (JSON.parse(raw) as BoardState) : initialState;
   });
   const [newTitle, setNewTitle] = React.useState("");
   const [editingId, setEditingId] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    localStorage.setItem(LS_KEY, JSON.stringify(board));
-  }, [board]);
+    localStorage.setItem(key, JSON.stringify(board));
+  }, [board, key]);
 
   const moveTask = (taskId: string, from: Columns, to: Columns) => {
     if (from === to) return;
@@ -159,7 +165,7 @@ const KanbanBoard: React.FC = () => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Kanban</CardTitle>
+        <CardTitle>{title ?? "Kanban"}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-center gap-2">

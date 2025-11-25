@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FolderKanban, CalendarDays, Timer } from "lucide-react";
 import { showSuccess } from "@/utils/toast";
-import KanbanBoard from "@/components/projects/KanbanBoard";
+import ProjectsManager from "@/components/projects/ProjectsManager";
 import TimesheetTimer from "@/components/timers/TimesheetTimer";
 
 const Projects: React.FC = () => {
@@ -31,14 +31,7 @@ const Projects: React.FC = () => {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Kanban Board</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <KanbanBoard />
-            </CardContent>
-          </Card>
+          <ProjectsManager />
 
           <Card>
             <CardHeader>
