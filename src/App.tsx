@@ -11,6 +11,8 @@ import Reports from "@/pages/Reports";
 import Settings from "@/pages/Settings";
 import NotFound from "@/pages/NotFound";
 import { RoleProvider } from "@/context/role-context";
+import ProtectedRoute from "@/components/routing/ProtectedRoute";
+import AccessDenied from "@/pages/AccessDenied";
 
 function App() {
   return (
@@ -19,11 +21,50 @@ function App() {
       <RoleProvider>
         <Routes>
           <Route path="/" element={<Index />} />
-          <Route path="/crm" element={<Crm />} />
-          <Route path="/projects" element={<Projects />} />
-          <Route path="/billing" element={<Billing />} />
-          <Route path="/reports" element={<Reports />} />
-          <Route path="/settings" element={<Settings />} />
+          <Route
+            path="/crm"
+            element={
+              <ProtectedRoute allowed={["Admin", "Manager"]}>
+                <Crm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/projects"
+            element={
+              <ProtectedRoute allowed={["Admin", "Manager", "Team Member", "Client"]}>
+                <Projects />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/billing"
+            element={
+              <ProtectedRoute allowed={["Admin", "Accountant", "Manager", "Client"]}>
+                <Billing />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/reports"
+            element={
+              <ProtectedRoute allowed={["Admin", "Manager", "Accountant"]}>
+                <Reports />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute allowed={["Admin", "Manager"]}>
+                <Settings />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Optional direct route for the AccessDenied page */}
+          <Route path="/no-access" element={<AccessDenied />} />
+
           <Route path="*" element={<NotFound />} />
         </Routes>
       </RoleProvider>
