@@ -11,6 +11,17 @@ import { showSuccess } from "@/utils/toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { exportToCsv } from "@/utils/export";
 import { format } from "date-fns";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type Customer = {
   id: string;
@@ -49,8 +60,23 @@ const CustomersTable: React.FC = () => {
   const [editEmail, setEditEmail] = React.useState("");
   const [editTags, setEditTags] = React.useState("");
 
+  const [selected, setSelected] = React.useState<Set<string>>(new Set());
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
+
   React.useEffect(() => {
     localStorage.setItem(LS_KEY, JSON.stringify(customers));
+  }, [customers]);
+
+  // Clear selection if dataset changes substantially
+  React.useEffect(() => {
+    setSelected((prev) => {
+      const next = new Set<string>();
+      const ids = new Set(customers.map((c) => c.id));
+      prev.forEach((id) => {
+        if (ids.has(id)) next.add(id);
+      });
+      return next;
+    });
   }, [customers]);
 
   // Reset page when filters/sorting/page size changes
@@ -178,6 +204,38 @@ const CustomersTable: React.FC = () => {
     exportToCsv("customers-filtered.csv", rows);
   };
 
+  const isAllPageSelected = pageRows.length > 0 && pageRows.every((r) => selected.has(r.id));
+  const toggleSelectAllPage = (checked: boolean) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      pageRows.forEach((r) => {
+        if (checked) next.add(r.id);
+        else next.delete(r.id);
+      });
+      return next;
+    });
+  };
+
+  const toggleSelectOne = (id: string, checked: boolean) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  };
+
+  const clearSelection = () => setSelected(new Set());
+
+  const confirmDeleteSelected = () => {
+    const ids = new Set(selected);
+    if (ids.size === 0) return;
+    setCustomers((prev) => prev.filter((c) => !ids.has(c.id)));
+    setConfirmOpen(false);
+    setSelected(new Set());
+    showSuccess("Selected customers deleted");
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -243,10 +301,36 @@ const CustomersTable: React.FC = () => {
           </div>
         </div>
 
+        {/* Bulk actions */}
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-sm text-muted-foreground">
+            {selected.size > 0 ? `${selected.size} selected` : "No rows selected"}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" disabled={selected.size === 0} onClick={clearSelection}>
+              Clear Selection
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={selected.size === 0}
+              onClick={() => setConfirmOpen(true)}
+            >
+              Delete Selected
+            </Button>
+          </div>
+        </div>
+
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10">
+                  <Checkbox
+                    aria-label="Select all on page"
+                    checked={isAllPageSelected}
+                    onCheckedChange={(ch) => toggleSelectAllPage(Boolean(ch))}
+                  />
+                </TableHead>
                 <TableHead className="min-w-[180px]">
                   <Button
                     variant="ghost"
@@ -307,6 +391,14 @@ const CustomersTable: React.FC = () => {
                 const isEditing = editingId === c.id;
                 return (
                   <TableRow key={c.id}>
+                    <TableCell className="w-10">
+                      <Checkbox
+                        aria-label="Select row"
+                        checked={selected.has(c.id)}
+                        onCheckedChange={(ch) => toggleSelectOne(c.id, Boolean(ch))}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </TableCell>
                     <TableCell className="font-medium">
                       {isEditing ? (
                         <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
@@ -377,7 +469,7 @@ const CustomersTable: React.FC = () => {
               })}
               {pageRows.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-sm text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center text-sm text-muted-foreground">
                     No customers match your search.
                   </TableCell>
                 </TableRow>
@@ -413,6 +505,23 @@ const CustomersTable: React.FC = () => {
             </Button>
           </div>
         </div>
+
+        <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete selected customers?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently remove the selected customer records from your browser storage.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDeleteSelected}>
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </CardContent>
     </Card>
   );
