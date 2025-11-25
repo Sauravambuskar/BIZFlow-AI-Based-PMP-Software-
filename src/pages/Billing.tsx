@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Receipt, IndianRupee, Repeat } from "lucide-react";
 import { showSuccess } from "@/utils/toast";
+import InvoiceBuilder from "@/components/billing/InvoiceBuilder";
 
 const Billing: React.FC = () => {
   return (
@@ -56,6 +57,8 @@ const Billing: React.FC = () => {
             </CardContent>
           </Card>
         </div>
+
+        <InvoiceBuilder />
       </div>
     </AppLayout>
   );

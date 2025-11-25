@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import ThemeToggle from "@/components/ThemeToggle";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { BadgeDollarSign } from "lucide-react";
+import RoleSwitcher from "@/components/RoleSwitcher";
 
 const BrandHeader: React.FC = () => {
   return (
@@ -24,6 +25,7 @@ const BrandHeader: React.FC = () => {
         <Input placeholder="Search customers, projects, invoices..." />
       </div>
       <div className="flex items-center gap-2">
+        <RoleSwitcher />
         <ThemeToggle />
         <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-cyan-500 to-violet-500" aria-label="User avatar" />
       </div>

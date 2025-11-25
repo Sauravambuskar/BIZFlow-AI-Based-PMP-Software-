@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FolderKanban, CalendarDays, Timer } from "lucide-react";
 import { showSuccess } from "@/utils/toast";
+import KanbanBoard from "@/components/projects/KanbanBoard";
+import TimesheetTimer from "@/components/timers/TimesheetTimer";
 
 const Projects: React.FC = () => {
   return (
@@ -33,10 +35,8 @@ const Projects: React.FC = () => {
             <CardHeader>
               <CardTitle>Kanban Board</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
-                Drag-and-drop tasks across stages (todo, doing, done).
-              </div>
+            <CardContent className="space-y-3">
+              <KanbanBoard />
             </CardContent>
           </Card>
 
@@ -52,6 +52,9 @@ const Projects: React.FC = () => {
             <CardContent>
               <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
                 Gantt and calendar views for planning milestones and deadlines.
+              </div>
+              <div className="mt-4">
+                <TimesheetTimer />
               </div>
             </CardContent>
           </Card>
