@@ -1,12 +1,13 @@
 "use client";
 
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Plus, Pencil, Check, X, ArrowUpDown, ChevronUp, ChevronDown } from "lucide-react";
+import { Trash2, Plus, Pencil, Check, X, ArrowUpDown, ChevronUp, ChevronDown, FileText } from "lucide-react";
 import { showSuccess } from "@/utils/toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { exportToCsv, copyCsvToClipboard } from "@/utils/export";
@@ -22,34 +23,27 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-
-type Customer = {
-  id: string;
-  name: string;
-  email: string;
-  tags: string[];
-  createdAt: string; // ISO
-};
-
-const LS_KEY = "bizflow_customers";
-
-const defaultCustomers: Customer[] = [
-  { id: "c-1", name: "Acme Industries", email: "ops@acme.com", tags: ["Enterprise", "Priority"], createdAt: new Date().toISOString() },
-  { id: "c-2", name: "Nimbus Labs", email: "hello@nimbus.ai", tags: ["Startup"], createdAt: new Date().toISOString() },
-  { id: "c-3", name: "BlueBay Retail", email: "contact@bluebay.in", tags: ["Retail"], createdAt: new Date().toISOString() },
-];
+import { useSupabaseSession } from "@/context/supabase-session";
+import {
+  listCustomers as listCustomersApi,
+  addCustomer as addCustomerApi,
+  updateCustomer as updateCustomerApi,
+  deleteCustomer as deleteCustomerApi,
+  deleteCustomers as deleteCustomersApi,
+  UICustomer as Customer,
+} from "@/data/customers";
 
 const CustomersTable: React.FC = () => {
-  const [customers, setCustomers] = React.useState<Customer[]>(() => {
-    const raw = localStorage.getItem(LS_KEY);
-    return raw ? (JSON.parse(raw) as Customer[]) : defaultCustomers;
-  });
+  const navigate = useNavigate();
+  const { session, loading: sessionLoading } = useSupabaseSession();
+
+  const [customers, setCustomers] = React.useState<Customer[]>([]);
   const [query, setQuery] = React.useState("");
   const [name, setName] = React.useState("");
   const [email, setEmail] = React.useState("");
   const [tagsInput, setTagsInput] = React.useState("");
 
-  // ADDED: sorting, pagination, and inline edit state
+  // sorting, pagination, and inline edit state
   const [sortKey, setSortKey] = React.useState<"name" | "email" | "createdAt">("name");
   const [sortDir, setSortDir] = React.useState<"asc" | "desc">("asc");
   const [pageSize, setPageSize] = React.useState<number>(8);
@@ -65,9 +59,21 @@ const CustomersTable: React.FC = () => {
   const [singleConfirmOpen, setSingleConfirmOpen] = React.useState(false);
   const [singleDeleteId, setSingleDeleteId] = React.useState<string | null>(null);
 
+  const [loading, setLoading] = React.useState(true);
+
   React.useEffect(() => {
-    localStorage.setItem(LS_KEY, JSON.stringify(customers));
-  }, [customers]);
+    if (sessionLoading) return;
+    if (!session?.user?.id) {
+      setCustomers([]);
+      setLoading(false);
+      return;
+    }
+    (async () => {
+      const rows = await listCustomersApi(session.user.id);
+      setCustomers(rows);
+      setLoading(false);
+    })();
+  }, [sessionLoading, session?.user?.id]);
 
   // Clear selection if dataset changes substantially
   React.useEffect(() => {
@@ -86,34 +92,29 @@ const CustomersTable: React.FC = () => {
     setPage(1);
   }, [query, sortKey, sortDir, pageSize]);
 
-  const addCustomer = () => {
+  const addCustomer = async () => {
     const n = name.trim();
     const e = email.trim();
-    if (!n || !e) return;
+    if (!n || !e || !session?.user?.id) return;
     const tags = tagsInput
       .split(",")
       .map((t) => t.trim())
       .filter(Boolean);
-    const next: Customer = {
-      id: `c-${Date.now()}`,
-      name: n,
-      email: e,
-      tags,
-      createdAt: new Date().toISOString(),
-    };
-    setCustomers((prev) => [next, ...prev]);
+    const created = await addCustomerApi(session.user.id, { name: n, email: e, tags });
+    setCustomers((prev) => [created, ...prev]);
     setName("");
     setEmail("");
     setTagsInput("");
     showSuccess("Customer added");
   };
 
-  const removeCustomer = (id: string) => {
+  const removeCustomer = async (id: string) => {
+    await deleteCustomerApi(id);
     setCustomers((prev) => prev.filter((c) => c.id !== id));
     showSuccess("Customer removed");
   };
 
-  // ADDED: sorting helpers
+  // sorting helpers
   const toggleSort = (key: "name" | "email" | "createdAt") => {
     if (sortKey === key) {
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -145,7 +146,6 @@ const CustomersTable: React.FC = () => {
         av = a.email.toLowerCase();
         bv = b.email.toLowerCase();
       } else {
-        // createdAt
         av = a.createdAt;
         bv = b.createdAt;
       }
@@ -177,7 +177,7 @@ const CustomersTable: React.FC = () => {
     setEditTags("");
   };
 
-  const saveEdit = () => {
+  const saveEdit = async () => {
     if (!editingId) return;
     const n = editName.trim();
     const e = editEmail.trim();
@@ -186,10 +186,9 @@ const CustomersTable: React.FC = () => {
       .split(",")
       .map((t) => t.trim())
       .filter(Boolean);
+    const updated = await updateCustomerApi(editingId, { name: n, email: e, tags: newTags });
     setCustomers((prev) =>
-      prev.map((c) =>
-        c.id === editingId ? { ...c, name: n, email: e, tags: newTags } : c,
-      ),
+      prev.map((c) => (c.id === editingId ? updated : c)),
     );
     showSuccess("Customer updated");
     cancelEdit();
@@ -240,48 +239,37 @@ const CustomersTable: React.FC = () => {
 
   const clearSelection = () => setSelected(new Set());
 
-  const confirmDeleteSelected = () => {
-    const ids = new Set(selected);
-    if (ids.size === 0) return;
-    setCustomers((prev) => prev.filter((c) => !ids.has(c.id)));
+  const confirmDeleteSelected = async () => {
+    const ids = Array.from(selected);
+    if (ids.length === 0) return;
+    await deleteCustomersApi(ids);
+    setCustomers((prev) => prev.filter((c) => !ids.includes(c.id)));
     setConfirmOpen(false);
     setSelected(new Set());
     showSuccess("Selected customers deleted");
   };
 
-  const confirmDeleteSingle = () => {
+  const confirmDeleteSingle = async () => {
     if (!singleDeleteId) return;
-    removeCustomer(singleDeleteId);
+    await removeCustomer(singleDeleteId);
     setSingleConfirmOpen(false);
     setSingleDeleteId(null);
   };
 
-  const exportSelected = () => {
-    if (selected.size === 0) return;
-    const rows = customers
-      .filter((c) => selected.has(c.id))
-      .map((c) => ({
-        name: c.name,
-        email: c.email,
-        tags: c.tags.join(", "),
-        createdAt: c.createdAt,
-      }));
-    exportToCsv("customers-selected.csv", rows);
-  };
-
-  const copySelected = async () => {
-    if (selected.size === 0) return;
-    const rows = customers
-      .filter((c) => selected.has(c.id))
-      .map((c) => ({
-        name: c.name,
-        email: c.email,
-        tags: c.tags.join(", "),
-        createdAt: c.createdAt,
-      }));
-    await copyCsvToClipboard(rows);
-    showSuccess("Selected CSV copied to clipboard");
-  };
+  if (sessionLoading || loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Customers</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex h-24 items-center justify-center text-sm text-muted-foreground">
+            Loading customers…
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -363,13 +351,36 @@ const CustomersTable: React.FC = () => {
             {selected.size > 0 ? `${selected.size} selected` : "No rows selected"}
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" disabled={selected.size === 0} onClick={exportSelected}>
+            <Button variant="outline" disabled={selected.size === 0} onClick={() => {
+              if (selected.size === 0) return;
+              const rows = customers
+                .filter((c) => selected.has(c.id))
+                .map((c) => ({
+                  name: c.name,
+                  email: c.email,
+                  tags: c.tags.join(", "),
+                  createdAt: c.createdAt,
+                }));
+              exportToCsv("customers-selected.csv", rows);
+            }}>
               Export Selected CSV
             </Button>
             <Button
               variant="secondary"
               disabled={selected.size === 0}
-              onClick={copySelected}
+              onClick={async () => {
+                if (selected.size === 0) return;
+                const rows = customers
+                  .filter((c) => selected.has(c.id))
+                  .map((c) => ({
+                    name: c.name,
+                    email: c.email,
+                    tags: c.tags.join(", "),
+                    createdAt: c.createdAt,
+                  }));
+                await copyCsvToClipboard(rows);
+                showSuccess("Selected CSV copied to clipboard");
+              }}
             >
               Copy Selected CSV
             </Button>
@@ -414,7 +425,7 @@ const CustomersTable: React.FC = () => {
                     )}
                   </Button>
                 </TableHead>
-                <TableHead className="min-w-[220px]">
+                <TableHead className="min-w=[220px]">
                   <Button
                     variant="ghost"
                     size="sm"
@@ -449,7 +460,7 @@ const CustomersTable: React.FC = () => {
                     )}
                   </Button>
                 </TableHead>
-                <TableHead className="w-36">Actions</TableHead>
+                <TableHead className="w-44">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -514,10 +525,18 @@ const CustomersTable: React.FC = () => {
                           <Button
                             variant="ghost"
                             size="icon"
-                            aria-label="Edit"
+                            aria-label="Edit inline"
                             onClick={() => startEdit(c)}
                           >
                             <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label="Details"
+                            onClick={() => navigate(`/crm/customers/${c.id}`)}
+                          >
+                            <FileText className="h-4 w-4" />
                           </Button>
                           <Button
                             variant="ghost"
@@ -539,7 +558,7 @@ const CustomersTable: React.FC = () => {
               {pageRows.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center text-sm text-muted-foreground">
-                    No customers match your search.
+                    No customers found.
                   </TableCell>
                 </TableRow>
               )}
@@ -580,7 +599,7 @@ const CustomersTable: React.FC = () => {
             <AlertDialogHeader>
               <AlertDialogTitle>Delete selected customers?</AlertDialogTitle>
               <AlertDialogDescription>
-                This action cannot be undone. This will permanently remove the selected customer records from your browser storage.
+                This action cannot be undone. These records will be permanently removed from your account.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -597,7 +616,7 @@ const CustomersTable: React.FC = () => {
             <AlertDialogHeader>
               <AlertDialogTitle>Delete this customer?</AlertDialogTitle>
               <AlertDialogDescription>
-                This action cannot be undone. This will permanently remove this customer from your browser storage.
+                This action cannot be undone. This will permanently remove this customer from your account.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

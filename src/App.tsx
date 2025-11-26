@@ -9,6 +9,7 @@ import Projects from "@/pages/Projects";
 import Billing from "@/pages/Billing";
 import Reports from "@/pages/Reports";
 import Settings from "@/pages/Settings";
+import CustomerDetails from "@/pages/CustomerDetails";
 import NotFound from "@/pages/NotFound";
 import { RoleProvider } from "@/context/role-context";
 import ProtectedRoute from "@/components/routing/ProtectedRoute";
@@ -39,6 +40,16 @@ function App() {
                 <AuthenticatedRoute>
                   <ProtectedRoute allowed={["Admin", "Manager"]}>
                     <Crm />
+                  </ProtectedRoute>
+                </AuthenticatedRoute>
+              }
+            />
+            <Route
+              path="/crm/customers/:id"
+              element={
+                <AuthenticatedRoute>
+                  <ProtectedRoute allowed={["Admin", "Manager"]}>
+                    <CustomerDetails />
                   </ProtectedRoute>
                 </AuthenticatedRoute>
               }
