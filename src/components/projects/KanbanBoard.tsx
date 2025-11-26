@@ -4,10 +4,20 @@ import React from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Copy } from "lucide-react";
 import { showSuccess } from "@/utils/toast";
 import TaskEditorDialog from "./TaskEditorDialog";
-import { exportToCsv } from "@/utils/export";
+import { exportToCsv, copyCsvToClipboard } from "@/utils/export";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type Task = { id: string; title: string };
 type Columns = "todo" | "doing" | "done";
@@ -105,6 +115,9 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ storageKey, title }) => {
   const [newTitle, setNewTitle] = React.useState("");
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [query, setQuery] = React.useState("");
+  const [confirmClearOpen, setConfirmClearOpen] = React.useState(false);
+  const [singleConfirmOpen, setSingleConfirmOpen] = React.useState(false);
+  const [singleDeleteId, setSingleDeleteId] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     localStorage.setItem(key, JSON.stringify(board));
@@ -138,6 +151,14 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ storageKey, title }) => {
   };
   const exportAll = () => exportToCsv("tasks-all.csv", flattenForCsv(board));
   const exportFiltered = () => exportToCsv("tasks-filtered.csv", flattenForCsv(filteredBoard));
+  const copyAll = async () => {
+    await copyCsvToClipboard(flattenForCsv(board));
+    showSuccess("All tasks CSV copied to clipboard");
+  };
+  const copyFiltered = async () => {
+    await copyCsvToClipboard(flattenForCsv(filteredBoard));
+    showSuccess("Filtered tasks CSV copied to clipboard");
+  };
 
   const moveTask = (taskId: string, from: Columns, to: Columns) => {
     if (from === to) return;
@@ -186,6 +207,13 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ storageKey, title }) => {
     if (editingId === taskId) setEditingId(null);
   };
 
+  const confirmDeleteSingle = () => {
+    if (!singleDeleteId) return;
+    deleteTask(singleDeleteId);
+    setSingleConfirmOpen(false);
+    setSingleDeleteId(null);
+  };
+
   const clearDone = () => {
     const count = board.done.length;
     if (count === 0) return;
@@ -209,7 +237,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ storageKey, title }) => {
             <Plus className="h-4 w-4" />
             Add
           </Button>
-          <Button variant="outline" onClick={clearDone}>
+          <Button variant="outline" onClick={() => setConfirmClearOpen(true)}>
             Clear Done
           </Button>
         </div>
@@ -224,6 +252,16 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ storageKey, title }) => {
           </Button>
           <Button variant="outline" onClick={exportAll} className="whitespace-nowrap">
             Export All CSV
+          </Button>
+        </div>
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button variant="secondary" onClick={copyFiltered} className="whitespace-nowrap">
+            <Copy className="h-4 w-4" />
+            Copy Filtered CSV
+          </Button>
+          <Button variant="secondary" onClick={copyAll} className="whitespace-nowrap">
+            <Copy className="h-4 w-4" />
+            Copy All CSV
           </Button>
         </div>
         <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
@@ -244,7 +282,10 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ storageKey, title }) => {
             tasks={query.trim() ? filteredBoard.todo : board.todo}
             onDropTask={moveTask}
             onEditTask={(id) => setEditingId(id)}
-            onDeleteTask={deleteTask}
+            onDeleteTask={(id) => {
+              setSingleDeleteId(id);
+              setSingleConfirmOpen(true);
+            }}
           />
           <Column
             label="Doing"
@@ -252,7 +293,10 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ storageKey, title }) => {
             tasks={query.trim() ? filteredBoard.doing : board.doing}
             onDropTask={moveTask}
             onEditTask={(id) => setEditingId(id)}
-            onDeleteTask={deleteTask}
+            onDeleteTask={(id) => {
+              setSingleDeleteId(id);
+              setSingleConfirmOpen(true);
+            }}
           />
           <Column
             label="Done"
@@ -260,7 +304,10 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ storageKey, title }) => {
             tasks={query.trim() ? filteredBoard.done : board.done}
             onDropTask={moveTask}
             onEditTask={(id) => setEditingId(id)}
-            onDeleteTask={deleteTask}
+            onDeleteTask={(id) => {
+              setSingleDeleteId(id);
+              setSingleConfirmOpen(true);
+            }}
           />
         </div>
         <TaskEditorDialog
@@ -282,6 +329,43 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ storageKey, title }) => {
             setEditingId(null);
           }}
         />
+        {/* Confirm clearing done tasks */}
+        <AlertDialog open={confirmClearOpen} onOpenChange={setConfirmClearOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Clear done tasks?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will remove all tasks in the Done column. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  clearDone();
+                  setConfirmClearOpen(false);
+                }}
+              >
+                Clear
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+        {/* Confirm single task delete */}
+        <AlertDialog open={singleConfirmOpen} onOpenChange={setSingleConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete this task?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently remove the selected task from the board.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDeleteSingle}>Delete</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </CardContent>
     </Card>
   );
