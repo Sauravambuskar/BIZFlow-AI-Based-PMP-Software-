@@ -18,20 +18,20 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useSupabaseSession } from "@/context/supabase-session";
+import {
+  listLeads as listLeadsApi,
+  addLead as addLeadApi,
+  updateLead as updateLeadApi,
+  moveLead as moveLeadApi,
+  deleteLead as deleteLeadApi,
+  clearLost as clearLostApi,
+  PipelineState,
+  UILead,
+  Stage,
+} from "@/data/leads";
 
-type Lead = { id: string; name: string; amount: number };
-type Stage = "new" | "qualified" | "proposal" | "won" | "lost";
-type PipelineState = Record<Stage, Lead[]>;
-
-const LS_KEY = "crm.leads.v1";
-
-const initialLeads: PipelineState = {
-  new: [],
-  qualified: [],
-  proposal: [],
-  won: [],
-  lost: [],
-};
+type Lead = UILead;
 
 const stageMeta: Record<Stage, { label: string }> = {
   new: { label: "New" },
@@ -115,10 +115,17 @@ const Column: React.FC<{
 };
 
 const LeadsPipeline: React.FC = () => {
-  const [pipeline, setPipeline] = React.useState<PipelineState>(() => {
-    const raw = localStorage.getItem(LS_KEY);
-    return raw ? (JSON.parse(raw) as PipelineState) : initialLeads;
+  const { session, loading: sessionLoading } = useSupabaseSession();
+
+  const [pipeline, setPipeline] = React.useState<PipelineState>({
+    new: [],
+    qualified: [],
+    proposal: [],
+    won: [],
+    lost: [],
   });
+  const [loading, setLoading] = React.useState(true);
+
   const [name, setName] = React.useState("");
   const [amount, setAmount] = React.useState<string>("");
   const [editingId, setEditingId] = React.useState<string | null>(null);
@@ -128,8 +135,17 @@ const LeadsPipeline: React.FC = () => {
   const [singleDeleteId, setSingleDeleteId] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    localStorage.setItem(LS_KEY, JSON.stringify(pipeline));
-  }, [pipeline]);
+    if (sessionLoading) return;
+    if (!session?.user?.id) {
+      setLoading(false);
+      return;
+    }
+    (async () => {
+      const data = await listLeadsApi(session.user.id);
+      setPipeline(data);
+      setLoading(false);
+    })();
+  }, [sessionLoading, session?.user?.id]);
 
   const filteredPipeline = React.useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -142,26 +158,25 @@ const LeadsPipeline: React.FC = () => {
       proposal: filterLeads(pipeline.proposal),
       won: filterLeads(pipeline.won),
       lost: filterLeads(pipeline.lost),
-    } as PipelineState;
+    };
   }, [pipeline, query]);
 
-  const moveLead = (leadId: string, from: Stage, to: Stage) => {
+  const moveLead = async (leadId: string, from: Stage, to: Stage) => {
     if (from === to) return;
-    const lead = pipeline[from].find((l) => l.id === leadId);
-    if (!lead) return;
+    const updated = await moveLeadApi(leadId, to);
     setPipeline((prev) => ({
       ...prev,
       [from]: prev[from].filter((l) => l.id !== leadId),
-      [to]: [lead, ...prev[to]],
+      [to]: [updated, ...prev[to]],
     }));
   };
 
-  const addLead = () => {
+  const addLead = async () => {
     const n = name.trim();
     const a = Number(amount);
-    if (!n || Number.isNaN(a)) return;
-    const lead: Lead = { id: `${Date.now()}`, name: n, amount: a };
-    setPipeline((p) => ({ ...p, new: [lead, ...p.new] }));
+    if (!n || Number.isNaN(a) || !session?.user?.id) return;
+    const created = await addLeadApi(session.user.id, { name: n, amount: a, stage: "new" });
+    setPipeline((p) => ({ ...p, new: [created, ...p.new] }));
     setName("");
     setAmount("");
     showSuccess("Lead added");
@@ -175,19 +190,21 @@ const LeadsPipeline: React.FC = () => {
     return null;
   };
 
-  const updateLead = (id: string, newName: string, newAmount: number) => {
+  const updateLead = async (id: string, newName: string, newAmount: number) => {
     const s = findStageOf(id);
     if (!s) return;
+    const updated = await updateLeadApi(id, { name: newName, amount: newAmount });
     setPipeline((prev) => ({
       ...prev,
-      [s]: prev[s].map((l) => (l.id === id ? { ...l, name: newName, amount: newAmount } : l)),
+      [s]: prev[s].map((l) => (l.id === id ? updated : l)),
     }));
     showSuccess("Lead updated");
   };
 
-  const deleteLead = (id: string) => {
+  const deleteLead = async (id: string) => {
     const s = findStageOf(id);
     if (!s) return;
+    await deleteLeadApi(id);
     setPipeline((prev) => ({
       ...prev,
       [s]: prev[s].filter((l) => l.id !== id),
@@ -196,15 +213,17 @@ const LeadsPipeline: React.FC = () => {
     showSuccess("Lead deleted");
   };
 
-  const clearLost = () => {
+  const clearLost = async () => {
+    if (!session?.user?.id) return;
     if (pipeline.lost.length === 0) return;
+    await clearLostApi(session.user.id);
     setPipeline((p) => ({ ...p, lost: [] }));
     showSuccess("Cleared lost leads");
   };
 
-  const confirmDeleteSingle = () => {
+  const confirmDeleteSingle = async () => {
     if (!singleDeleteId) return;
-    deleteLead(singleDeleteId);
+    await deleteLead(singleDeleteId);
     setSingleConfirmOpen(false);
     setSingleDeleteId(null);
   };
@@ -247,6 +266,21 @@ const LeadsPipeline: React.FC = () => {
          pipeline.won.find((l) => l.id === editingId) ||
          pipeline.lost.find((l) => l.id === editingId))
       : null;
+
+  if (sessionLoading || loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Leads Pipeline</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex h-24 items-center justify-center text-sm text-muted-foreground">
+            Loading leads…
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -315,9 +349,6 @@ const LeadsPipeline: React.FC = () => {
           ) : null}
         </div>
         <div className="grid gap-3 md:grid-cols-5">
-          {/*
-            Show filtered view when searching, otherwise full pipeline.
-          */}
           {(Object.keys(stageMeta) as Stage[]).map((s) => (
             <Column
               key={s}
