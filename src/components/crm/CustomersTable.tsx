@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Trash2, Plus, Pencil, Check, X, ArrowUpDown, ChevronUp, ChevronDown } from "lucide-react";
 import { showSuccess } from "@/utils/toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { exportToCsv } from "@/utils/export";
+import { exportToCsv, copyCsvToClipboard } from "@/utils/export";
 import { format } from "date-fns";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -206,6 +206,17 @@ const CustomersTable: React.FC = () => {
     exportToCsv("customers-filtered.csv", rows);
   };
 
+  const copyFiltered = async () => {
+    const rows = sorted.map((c) => ({
+      name: c.name,
+      email: c.email,
+      tags: c.tags.join(", "),
+      createdAt: c.createdAt,
+    }));
+    await copyCsvToClipboard(rows);
+    showSuccess("Filtered CSV copied to clipboard");
+  };
+
   const isAllPageSelected = pageRows.length > 0 && pageRows.every((r) => selected.has(r.id));
   const toggleSelectAllPage = (checked: boolean) => {
     setSelected((prev) => {
@@ -258,6 +269,20 @@ const CustomersTable: React.FC = () => {
     exportToCsv("customers-selected.csv", rows);
   };
 
+  const copySelected = async () => {
+    if (selected.size === 0) return;
+    const rows = customers
+      .filter((c) => selected.has(c.id))
+      .map((c) => ({
+        name: c.name,
+        email: c.email,
+        tags: c.tags.join(", "),
+        createdAt: c.createdAt,
+      }));
+    await copyCsvToClipboard(rows);
+    showSuccess("Selected CSV copied to clipboard");
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -301,9 +326,18 @@ const CustomersTable: React.FC = () => {
 
         {/* Secondary toolbar: export and page size */}
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <Button variant="outline" onClick={exportFiltered} className="w-full sm:w-auto">
-            Export Filtered CSV
-          </Button>
+          <div className="flex w-full sm:w-auto gap-2">
+            <Button variant="outline" onClick={exportFiltered} className="flex-1 sm:flex-none">
+              Export Filtered CSV
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={copyFiltered}
+              className="flex-1 sm:flex-none"
+            >
+              Copy Filtered CSV
+            </Button>
+          </div>
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Rows per page</span>
             <Select
@@ -331,6 +365,13 @@ const CustomersTable: React.FC = () => {
           <div className="flex items-center gap-2">
             <Button variant="outline" disabled={selected.size === 0} onClick={exportSelected}>
               Export Selected CSV
+            </Button>
+            <Button
+              variant="secondary"
+              disabled={selected.size === 0}
+              onClick={copySelected}
+            >
+              Copy Selected CSV
             </Button>
             <Button variant="outline" disabled={selected.size === 0} onClick={clearSelection}>
               Clear Selection
