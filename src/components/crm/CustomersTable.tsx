@@ -32,6 +32,7 @@ import {
   deleteCustomers as deleteCustomersApi,
   UICustomer as Customer,
 } from "@/data/customers";
+import { supabase } from "@/integrations/supabase/client";
 
 const CustomersTable: React.FC = () => {
   const navigate = useNavigate();
@@ -74,6 +75,38 @@ const CustomersTable: React.FC = () => {
       setLoading(false);
     })();
   }, [sessionLoading, session?.user?.id]);
+
+  // Realtime updates for customers
+  React.useEffect(() => {
+    if (!session?.user?.id) return;
+    const userId = session.user.id;
+    const channel = supabase
+      .channel(`realtime:customers:${userId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'customers', filter: `user_id=eq.${userId}` },
+        (payload) => {
+          const type = (payload as any).eventType as 'INSERT' | 'UPDATE' | 'DELETE';
+          if (type === 'INSERT') {
+            const r: any = (payload as any).new;
+            const rec: Customer = { id: r.id, name: r.name, email: r.email, tags: r.tags ?? [], createdAt: r.created_at };
+            setCustomers((prev) => (prev.some((c) => c.id === rec.id) ? prev : [rec, ...prev]));
+          } else if (type === 'UPDATE') {
+            const r: any = (payload as any).new;
+            const rec: Customer = { id: r.id, name: r.name, email: r.email, tags: r.tags ?? [], createdAt: r.created_at };
+            setCustomers((prev) => prev.map((c) => (c.id === rec.id ? rec : c)));
+          } else if (type === 'DELETE') {
+            const r: any = (payload as any).old;
+            const id = r.id as string;
+            setCustomers((prev) => prev.filter((c) => c.id !== id));
+          }
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [session?.user?.id]);
 
   // Clear selection if dataset changes substantially
   React.useEffect(() => {
@@ -425,7 +458,7 @@ const CustomersTable: React.FC = () => {
                     )}
                   </Button>
                 </TableHead>
-                <TableHead className="min-w=[220px]">
+                <TableHead className="min-w-[220px]">
                   <Button
                     variant="ghost"
                     size="sm"

@@ -30,6 +30,7 @@ import {
   UILead,
   Stage,
 } from "@/data/leads";
+import { supabase } from "@/integrations/supabase/client";
 
 type Lead = UILead;
 
@@ -133,6 +134,59 @@ const LeadsPipeline: React.FC = () => {
   const [confirmClearOpen, setConfirmClearOpen] = React.useState(false);
   const [singleConfirmOpen, setSingleConfirmOpen] = React.useState(false);
   const [singleDeleteId, setSingleDeleteId] = React.useState<string | null>(null);
+
+  // Realtime updates for leads
+  React.useEffect(() => {
+    if (!session?.user?.id) return;
+    const userId = session.user.id;
+    const channel = supabase
+      .channel(`realtime:leads:${userId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'leads', filter: `user_id=eq.${userId}` },
+        (payload) => {
+          const type = (payload as any).eventType as 'INSERT' | 'UPDATE' | 'DELETE';
+          if (type === 'INSERT') {
+            const r: any = (payload as any).new;
+            const lead: UILead = { id: r.id, name: r.name, amount: Number(r.amount ?? 0), stage: r.stage, createdAt: r.created_at };
+            setPipeline((prev) => {
+              const exists = prev[lead.stage].some((l) => l.id === lead.id);
+              if (exists) return prev;
+              return { ...prev, [lead.stage]: [lead, ...prev[lead.stage]] };
+            });
+          } else if (type === 'UPDATE') {
+            const r: any = (payload as any).new;
+            const lead: UILead = { id: r.id, name: r.name, amount: Number(r.amount ?? 0), stage: r.stage, createdAt: r.created_at };
+            setPipeline((prev) => {
+              const currentStage = (Object.keys(prev) as Stage[]).find((s) => prev[s].some((l) => l.id === lead.id));
+              if (!currentStage) {
+                return { ...prev, [lead.stage]: [lead, ...prev[lead.stage]] };
+              }
+              if (currentStage === lead.stage) {
+                return { ...prev, [lead.stage]: prev[lead.stage].map((l) => (l.id === lead.id ? lead : l)) };
+              }
+              return {
+                ...prev,
+                [currentStage]: prev[currentStage].filter((l) => l.id !== lead.id),
+                [lead.stage]: [lead, ...prev[lead.stage]],
+              };
+            });
+          } else if (type === 'DELETE') {
+            const r: any = (payload as any).old;
+            const id = r.id as string;
+            setPipeline((prev) => {
+              const stage = (Object.keys(prev) as Stage[]).find((s) => prev[s].some((l) => l.id === id));
+              if (!stage) return prev;
+              return { ...prev, [stage]: prev[stage].filter((l) => l.id !== id) };
+            });
+          }
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [session?.user?.id]);
 
   React.useEffect(() => {
     if (sessionLoading) return;
