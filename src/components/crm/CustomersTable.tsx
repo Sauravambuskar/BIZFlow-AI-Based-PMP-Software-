@@ -62,6 +62,8 @@ const CustomersTable: React.FC = () => {
 
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
   const [confirmOpen, setConfirmOpen] = React.useState(false);
+  const [singleConfirmOpen, setSingleConfirmOpen] = React.useState(false);
+  const [singleDeleteId, setSingleDeleteId] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     localStorage.setItem(LS_KEY, JSON.stringify(customers));
@@ -236,6 +238,26 @@ const CustomersTable: React.FC = () => {
     showSuccess("Selected customers deleted");
   };
 
+  const confirmDeleteSingle = () => {
+    if (!singleDeleteId) return;
+    removeCustomer(singleDeleteId);
+    setSingleConfirmOpen(false);
+    setSingleDeleteId(null);
+  };
+
+  const exportSelected = () => {
+    if (selected.size === 0) return;
+    const rows = customers
+      .filter((c) => selected.has(c.id))
+      .map((c) => ({
+        name: c.name,
+        email: c.email,
+        tags: c.tags.join(", "),
+        createdAt: c.createdAt,
+      }));
+    exportToCsv("customers-selected.csv", rows);
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -307,6 +329,9 @@ const CustomersTable: React.FC = () => {
             {selected.size > 0 ? `${selected.size} selected` : "No rows selected"}
           </div>
           <div className="flex items-center gap-2">
+            <Button variant="outline" disabled={selected.size === 0} onClick={exportSelected}>
+              Export Selected CSV
+            </Button>
             <Button variant="outline" disabled={selected.size === 0} onClick={clearSelection}>
               Clear Selection
             </Button>
@@ -457,7 +482,10 @@ const CustomersTable: React.FC = () => {
                             variant="ghost"
                             size="icon"
                             aria-label="Delete"
-                            onClick={() => removeCustomer(c.id)}
+                            onClick={() => {
+                              setSingleDeleteId(c.id);
+                              setSingleConfirmOpen(true);
+                            }}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -519,6 +547,21 @@ const CustomersTable: React.FC = () => {
               <AlertDialogAction onClick={confirmDeleteSelected}>
                 Delete
               </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog open={singleConfirmOpen} onOpenChange={setSingleConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete this customer?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently remove this customer from your browser storage.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDeleteSingle}>Delete</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
