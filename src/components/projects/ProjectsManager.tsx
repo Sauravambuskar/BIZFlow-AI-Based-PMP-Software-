@@ -5,10 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, FolderKanban } from "lucide-react";
+import { Plus, Pencil, Trash2, FolderKanban, Copy, FileDown } from "lucide-react";
 import { showSuccess } from "@/utils/toast";
 import KanbanBoard from "./KanbanBoard";
 import ProjectEditorDialog from "./ProjectEditorDialog";
+import { exportToCsv, copyCsvToClipboard } from "@/utils/export";
 
 type Project = {
   id: string;
@@ -43,6 +44,15 @@ const ProjectsManager: React.FC = () => {
   }, [selectedId]);
 
   const selectedProject = projects.find((p) => p.id === selectedId) ?? null;
+  const projectsCsvRows = React.useMemo(
+    () =>
+      projects.map((p) => ({
+        name: p.name,
+        description: p.description ?? "",
+        createdAt: p.createdAt,
+      })),
+    [projects]
+  );
 
   const createProject = (name: string, description: string) => {
     const p: Project = { id: `${Date.now()}`, name, description, createdAt: new Date().toISOString() };
@@ -122,6 +132,31 @@ const ProjectsManager: React.FC = () => {
                 ))}
               </SelectContent>
             </Select>
+          </div>
+        </div>
+
+        {/* Projects export/copy */}
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => exportToCsv("projects.csv", projectsCsvRows)}
+              disabled={projects.length === 0}
+            >
+              <FileDown className="h-4 w-4" />
+              Export Projects CSV
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={async () => {
+                await copyCsvToClipboard(projectsCsvRows);
+                showSuccess("Projects CSV copied to clipboard");
+              }}
+              disabled={projects.length === 0}
+            >
+              <Copy className="h-4 w-4" />
+              Copy Projects CSV
+            </Button>
           </div>
         </div>
 
