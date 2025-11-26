@@ -5,7 +5,7 @@ import AppLayout from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import FinanceChart from "@/components/dashboard/FinanceChart";
 import { Button } from "@/components/ui/button";
-import { exportToCsv } from "@/utils/export";
+import { exportToCsv, copyCsvToClipboard } from "@/utils/export";
 import { financeData } from "../data/finance.ts";
 import { showSuccess } from "@/utils/toast";
 import TimeframeSelector from "../components/reports/TimeframeSelector";
@@ -179,6 +179,16 @@ const Reports: React.FC = () => {
                 className="w-full"
               >
                 Export Full (12M) CSV
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={async () => {
+                  await copyCsvToClipboard(currentViewRows);
+                  showSuccess("CSV copied to clipboard");
+                }}
+                className="w-full"
+              >
+                Copy Current View CSV
               </Button>
               <Button variant="outline" onClick={exportPdfReport} className="w-full">
                 Export Summary PDF
