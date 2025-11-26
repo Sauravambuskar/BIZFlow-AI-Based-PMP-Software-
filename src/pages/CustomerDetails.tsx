@@ -3,44 +3,46 @@
 import React from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { showSuccess } from "@/utils/toast";
 import { format } from "date-fns";
-import { getCustomer, updateCustomer, UICustomer } from "@/data/customers";
+import { getCustomer, updateCustomer, deleteCustomer, UICustomer } from "@/data/customers";
+import CustomerForm from "@/components/crm/CustomerForm";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const CustomerDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [loading, setLoading] = React.useState(true);
+  const [saving, setSaving] = React.useState(false);
+  const [deleting, setDeleting] = React.useState(false);
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
   const [customer, setCustomer] = React.useState<UICustomer | null>(null);
-  const [name, setName] = React.useState("");
-  const [email, setEmail] = React.useState("");
-  const [tags, setTags] = React.useState("");
 
   React.useEffect(() => {
     if (!id) return;
     (async () => {
       const c = await getCustomer(id);
       setCustomer(c);
-      setName(c.name);
-      setEmail(c.email);
-      setTags(c.tags.join(", "));
       setLoading(false);
     })();
   }, [id]);
 
-  const onSave = async () => {
+  const onSave = async (payload: { name: string; email: string; tags: string[] }) => {
     if (!id) return;
-    const updated = await updateCustomer(id, {
-      name: name.trim(),
-      email: email.trim(),
-      tags: tags
-        .split(",")
-        .map((t) => t.trim())
-        .filter(Boolean),
-    });
+    setSaving(true);
+    const updated = await updateCustomer(id, payload);
     setCustomer(updated);
+    setSaving(false);
     showSuccess("Customer updated");
   };
 
@@ -70,32 +72,55 @@ const CustomerDetails: React.FC = () => {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-3">
-            <div className="grid gap-1">
-              <label className="text-sm font-medium">Name</label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} />
-            </div>
-            <div className="grid gap-1">
-              <label className="text-sm font-medium">Email</label>
-              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-            </div>
-            <div className="grid gap-1">
-              <label className="text-sm font-medium">Tags</label>
-              <Input
-                placeholder="tag1, tag2"
-                value={tags}
-                onChange={(e) => setTags(e.target.value)}
-              />
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <Button onClick={onSave}>Save</Button>
+          <CustomerForm
+            defaultValues={{
+              name: customer.name,
+              email: customer.email,
+              tags: customer.tags,
+            }}
+            submitting={saving}
+            submitLabel={saving ? "Saving..." : "Save"}
+            onSubmit={onSave}
+          />
+          <div className="flex items-center justify-between pt-2">
             <Button variant="outline" onClick={() => navigate(-1)}>
               Back
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => setConfirmOpen(true)}
+              disabled={deleting}
+            >
+              {deleting ? "Deleting..." : "Delete Customer"}
             </Button>
           </div>
         </CardContent>
       </Card>
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this customer?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently remove this customer from your account.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                if (!id) return;
+                setDeleting(true);
+                await deleteCustomer(id);
+                setDeleting(false);
+                showSuccess("Customer deleted");
+                navigate("/crm");
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
