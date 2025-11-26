@@ -1,9 +1,13 @@
 "use client";
 
 import React from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 
 type LeadEditorDialogProps = {
   open: boolean;
@@ -20,17 +24,30 @@ const LeadEditorDialog: React.FC<LeadEditorDialogProps> = ({
   onOpenChange,
   onSave,
 }) => {
-  const [name, setName] = React.useState(initialName);
-  const [amount, setAmount] = React.useState<string>(String(initialAmount || ""));
+  const schema = React.useMemo(
+    () =>
+      z.object({
+        name: z.string().min(2, "Name must be at least 2 characters"),
+        amount: z
+          .coerce.number({ invalid_type_error: "Enter a valid amount" })
+          .min(0, "Amount must be 0 or more"),
+      }),
+    []
+  );
+
+  const form = useForm<z.infer<typeof schema>>({
+    resolver: zodResolver(schema),
+    defaultValues: { name: initialName, amount: initialAmount ?? 0 },
+    mode: "onChange",
+  });
 
   React.useEffect(() => {
     if (open) {
-      setName(initialName);
-      setAmount(String(initialAmount || ""));
+      form.reset({ name: initialName, amount: initialAmount ?? 0 });
     }
-  }, [open, initialName, initialAmount]);
+  }, [open, initialName, initialAmount, form]);
 
-  const canSave = name.trim().length > 0 && !Number.isNaN(Number(amount));
+  const submitting = form.formState.isSubmitting || !form.formState.isValid;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -38,31 +55,47 @@ const LeadEditorDialog: React.FC<LeadEditorDialogProps> = ({
         <DialogHeader>
           <DialogTitle>Edit Lead</DialogTitle>
         </DialogHeader>
-        <div className="space-y-3 py-2">
-          <Input
-            autoFocus
-            placeholder="Lead name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-          <Input
-            placeholder="Amount (USD)"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            inputMode="decimal"
-          />
-        </div>
-        <DialogFooter className="gap-2">
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button
-            disabled={!canSave}
-            onClick={() => onSave(name.trim(), Number(amount))}
+        <Form {...form}>
+          <form
+            className="space-y-3 py-2"
+            onSubmit={form.handleSubmit((values) => onSave(values.name.trim(), values.amount))}
           >
-            Save
-          </Button>
-        </DialogFooter>
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Name</FormLabel>
+                  <FormControl>
+                    <Input autoFocus placeholder="Lead name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="amount"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Amount (USD)</FormLabel>
+                  <FormControl>
+                    <Input type="number" step="0.01" inputMode="decimal" placeholder="0.00" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <DialogFooter className="gap-2">
+              <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={submitting}>
+                Save
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );
