@@ -4,10 +4,20 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Copy } from "lucide-react";
 import { showSuccess } from "@/utils/toast";
 import LeadEditorDialog from "./LeadEditorDialog";
-import { exportToCsv } from "@/utils/export";
+import { exportToCsv, copyCsvToClipboard } from "@/utils/export";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type Lead = { id: string; name: string; amount: number };
 type Stage = "new" | "qualified" | "proposal" | "won" | "lost";
@@ -113,6 +123,9 @@ const LeadsPipeline: React.FC = () => {
   const [amount, setAmount] = React.useState<string>("");
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [query, setQuery] = React.useState("");
+  const [confirmClearOpen, setConfirmClearOpen] = React.useState(false);
+  const [singleConfirmOpen, setSingleConfirmOpen] = React.useState(false);
+  const [singleDeleteId, setSingleDeleteId] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     localStorage.setItem(LS_KEY, JSON.stringify(pipeline));
@@ -189,6 +202,23 @@ const LeadsPipeline: React.FC = () => {
     showSuccess("Cleared lost leads");
   };
 
+  const confirmDeleteSingle = () => {
+    if (!singleDeleteId) return;
+    deleteLead(singleDeleteId);
+    setSingleConfirmOpen(false);
+    setSingleDeleteId(null);
+  };
+
+  const copyAll = async () => {
+    await copyCsvToClipboard(flattenForCsv(pipeline));
+    showSuccess("All leads CSV copied to clipboard");
+  };
+
+  const copyFiltered = async () => {
+    await copyCsvToClipboard(flattenForCsv(filteredPipeline));
+    showSuccess("Filtered leads CSV copied to clipboard");
+  };
+
   const totals = React.useMemo(() => {
     const all = (Object.keys(pipeline) as Stage[]).flatMap((s) => pipeline[s]);
     const total = all.reduce((s, l) => s + l.amount, 0);
@@ -240,7 +270,11 @@ const LeadsPipeline: React.FC = () => {
             <Plus className="h-4 w-4" />
             Add Lead
           </Button>
-          <Button variant="outline" onClick={clearLost} className="whitespace-nowrap">
+          <Button
+            variant="outline"
+            onClick={() => setConfirmClearOpen(true)}
+            className="whitespace-nowrap"
+          >
             Clear Lost
           </Button>
         </div>
@@ -255,6 +289,16 @@ const LeadsPipeline: React.FC = () => {
           </Button>
           <Button variant="outline" onClick={exportAll} className="whitespace-nowrap">
             Export All CSV
+          </Button>
+        </div>
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button variant="secondary" onClick={copyFiltered} className="whitespace-nowrap">
+            <Copy className="h-4 w-4" />
+            Copy Filtered CSV
+          </Button>
+          <Button variant="secondary" onClick={copyAll} className="whitespace-nowrap">
+            <Copy className="h-4 w-4" />
+            Copy All CSV
           </Button>
         </div>
         <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
@@ -281,7 +325,10 @@ const LeadsPipeline: React.FC = () => {
               leads={query.trim() ? filteredPipeline[s] : pipeline[s]}
               onDropLead={moveLead}
               onEdit={(id) => setEditingId(id)}
-              onDelete={deleteLead}
+              onDelete={(id) => {
+                setSingleDeleteId(id);
+                setSingleConfirmOpen(true);
+              }}
             />
           ))}
         </div>
@@ -298,6 +345,45 @@ const LeadsPipeline: React.FC = () => {
             setEditingId(null);
           }}
         />
+
+        {/* Confirm clearing lost leads */}
+        <AlertDialog open={confirmClearOpen} onOpenChange={setConfirmClearOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Clear lost leads?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will remove all leads in the Lost stage. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  clearLost();
+                  setConfirmClearOpen(false);
+                }}
+              >
+                Clear
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Confirm single lead delete */}
+        <AlertDialog open={singleConfirmOpen} onOpenChange={setSingleConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete this lead?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently remove the selected lead from your pipeline.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDeleteSingle}>Delete</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </CardContent>
     </Card>
   );
