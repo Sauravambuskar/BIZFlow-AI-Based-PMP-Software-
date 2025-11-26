@@ -6,8 +6,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Trash2 } from "lucide-react";
-import { exportToCsv } from "@/utils/export";
+import { exportToCsv, copyCsvToClipboard } from "@/utils/export";
 import { showSuccess } from "@/utils/toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type Item = { id: string; description: string; qty: number; rate: number; tax: number };
 
@@ -18,6 +28,8 @@ const InvoiceBuilder: React.FC = () => {
     const raw = localStorage.getItem(LS_KEY);
     return raw ? (JSON.parse(raw) as Item[]) : [{ id: "i-1", description: "", qty: 1, rate: 0, tax: 0 }];
   });
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = React.useState(false);
+  const [deleteId, setDeleteId] = React.useState<string | null>(null);
 
   const addItem = () => setItems((prev) => [...prev, { id: `i-${Date.now()}`, description: "", qty: 1, rate: 0, tax: 0 }]);
   const removeItem = (id: string) => setItems((prev) => prev.filter((i) => i.id !== id));
@@ -38,6 +50,16 @@ const InvoiceBuilder: React.FC = () => {
 
   const exportCsv = () => {
     exportToCsv("invoice.csv", items.map((i) => ({ description: i.description, qty: i.qty, rate: i.rate, tax: i.tax })));
+  };
+  const copyCsv = async () => {
+    const rows = items.map((i) => ({
+      description: i.description,
+      qty: i.qty,
+      rate: i.rate,
+      tax: i.tax,
+    }));
+    await copyCsvToClipboard(rows);
+    showSuccess("Invoice CSV copied to clipboard");
   };
   const saveDraft = () => showSuccess("Invoice draft saved");
 
@@ -169,7 +191,15 @@ const InvoiceBuilder: React.FC = () => {
                     <Input type="number" value={i.tax} onChange={(e) => update(i.id, "tax", e.target.value)} />
                   </TableCell>
                   <TableCell>
-                    <Button variant="ghost" size="icon" onClick={() => removeItem(i.id)} aria-label="Remove item">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        setDeleteId(i.id);
+                        setConfirmDeleteOpen(true);
+                      }}
+                      aria-label="Remove item"
+                    >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </TableCell>
@@ -207,10 +237,39 @@ const InvoiceBuilder: React.FC = () => {
           <Button variant="secondary" onClick={exportCsv}>
             Export CSV
           </Button>
+          <Button variant="secondary" onClick={copyCsv}>
+            Copy CSV
+          </Button>
           <Button variant="outline" onClick={exportPdf}>
             Export PDF
           </Button>
         </div>
+
+        <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Remove this item?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will delete the selected line from the invoice.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  if (deleteId) {
+                    removeItem(deleteId);
+                    showSuccess("Item removed");
+                  }
+                  setDeleteId(null);
+                  setConfirmDeleteOpen(false);
+                }}
+              >
+                Remove
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </CardContent>
     </Card>
   );
