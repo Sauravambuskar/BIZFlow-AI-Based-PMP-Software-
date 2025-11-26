@@ -21,7 +21,13 @@ type Project = {
 const PROJECTS_LS_KEY = "bizflow_projects_v1";
 const boardKey = (projectId: string) => `bizflow_kanban_${projectId}`;
 
-const ProjectsManager: React.FC = () => {
+export type ProjectsManagerRef = {
+  openNew: () => void;
+  openRename: () => void;
+  deleteSelected: () => void;
+};
+
+const ProjectsManager = React.forwardRef<ProjectsManagerRef, {}>((_props, ref) => {
   const [projects, setProjects] = React.useState<Project[]>(() => {
     const raw = localStorage.getItem(PROJECTS_LS_KEY);
     return raw ? (JSON.parse(raw) as Project[]) : [];
@@ -34,6 +40,16 @@ const ProjectsManager: React.FC = () => {
   const [newOpen, setNewOpen] = React.useState(false);
   const [editOpen, setEditOpen] = React.useState(false);
   const [confirmOpen, setConfirmOpen] = React.useState(false);
+
+  React.useImperativeHandle(
+    ref,
+    () => ({
+      openNew: () => setNewOpen(true),
+      openRename: () => setEditOpen(true),
+      deleteSelected: () => setConfirmOpen(true),
+    }),
+    []
+  );
 
   React.useEffect(() => {
     localStorage.setItem(PROJECTS_LS_KEY, JSON.stringify(projects));
@@ -224,6 +240,6 @@ const ProjectsManager: React.FC = () => {
       </CardContent>
     </Card>
   );
-};
+});
 
 export default ProjectsManager;

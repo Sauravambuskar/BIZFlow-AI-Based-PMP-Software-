@@ -7,9 +7,12 @@ import { Button } from "@/components/ui/button";
 import { FolderKanban, CalendarDays, Timer } from "lucide-react";
 import { showSuccess } from "@/utils/toast";
 import ProjectsManager from "@/components/projects/ProjectsManager";
+import type { ProjectsManagerRef } from "@/components/projects/ProjectsManager";
 import TimesheetTimer from "@/components/timers/TimesheetTimer";
 
 const Projects: React.FC = () => {
+  const managerRef = React.useRef<ProjectsManagerRef>(null);
+
   return (
     <AppLayout>
       <div className="flex flex-col gap-4">
@@ -19,7 +22,7 @@ const Projects: React.FC = () => {
             <p className="text-sm text-muted-foreground">Create projects, assign teams, and track progress.</p>
           </div>
           <div className="flex gap-2">
-            <Button onClick={() => showSuccess("New Project")}>
+            <Button onClick={() => managerRef.current?.openNew()}>
               <FolderKanban className="h-4 w-4" />
               New Project
             </Button>
@@ -31,7 +34,7 @@ const Projects: React.FC = () => {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
-          <ProjectsManager />
+          <ProjectsManager ref={managerRef} />
 
           <Card>
             <CardHeader>
