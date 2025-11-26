@@ -5,11 +5,15 @@ import AppLayout from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, UserPlus, Tags } from "lucide-react";
-import { showSuccess } from "@/utils/toast";
 import CustomersTable from "@/components/crm/CustomersTable";
 import LeadsPipeline from "@/components/crm/LeadsPipeline";
+import AddCustomerDialog from "@/components/crm/AddCustomerDialog";
+import NewLeadDialog from "@/components/crm/NewLeadDialog";
 
 const Crm: React.FC = () => {
+  const [addCustomerOpen, setAddCustomerOpen] = React.useState(false);
+  const [newLeadOpen, setNewLeadOpen] = React.useState(false);
+
   return (
     <AppLayout>
       <div className="flex flex-col gap-4">
@@ -19,11 +23,11 @@ const Crm: React.FC = () => {
             <p className="text-sm text-muted-foreground">Manage customers, leads, and communications.</p>
           </div>
           <div className="flex gap-2">
-            <Button onClick={() => showSuccess("Add Customer")}>
+            <Button onClick={() => setAddCustomerOpen(true)}>
               <UserPlus className="h-4 w-4" />
               Add Customer
             </Button>
-            <Button variant="secondary" onClick={() => showSuccess("New Lead")}>
+            <Button variant="secondary" onClick={() => setNewLeadOpen(true)}>
               <Plus className="h-4 w-4" />
               New Lead
             </Button>
@@ -52,6 +56,9 @@ const Crm: React.FC = () => {
 
         <CustomersTable />
       </div>
+
+      <AddCustomerDialog open={addCustomerOpen} onOpenChange={setAddCustomerOpen} />
+      <NewLeadDialog open={newLeadOpen} onOpenChange={setNewLeadOpen} />
     </AppLayout>
   );
 };
