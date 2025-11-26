@@ -18,6 +18,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import CustomerNotes from "@/components/crm/CustomerNotes";
 
 const CustomerDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -96,6 +97,9 @@ const CustomerDetails: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+      <div className="mt-4">
+        <CustomerNotes customerId={customer.id} />
+      </div>
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
