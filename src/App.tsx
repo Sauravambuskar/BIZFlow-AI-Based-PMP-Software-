@@ -13,61 +13,84 @@ import NotFound from "@/pages/NotFound";
 import { RoleProvider } from "@/context/role-context";
 import ProtectedRoute from "@/components/routing/ProtectedRoute";
 import AccessDenied from "@/pages/AccessDenied";
+import { SupabaseSessionProvider } from "@/context/supabase-session";
+import AuthenticatedRoute from "@/components/routing/AuthenticatedRoute";
+import Login from "@/pages/Login";
 
 function App() {
   return (
     <BrowserRouter>
       <ToastProvider />
-      <RoleProvider>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route
-            path="/crm"
-            element={
-              <ProtectedRoute allowed={["Admin", "Manager"]}>
-                <Crm />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/projects"
-            element={
-              <ProtectedRoute allowed={["Admin", "Manager", "Team Member", "Client"]}>
-                <Projects />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/billing"
-            element={
-              <ProtectedRoute allowed={["Admin", "Accountant", "Manager", "Client"]}>
-                <Billing />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/reports"
-            element={
-              <ProtectedRoute allowed={["Admin", "Manager", "Accountant"]}>
-                <Reports />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/settings"
-            element={
-              <ProtectedRoute allowed={["Admin", "Manager"]}>
-                <Settings />
-              </ProtectedRoute>
-            }
-          />
+      <SupabaseSessionProvider>
+        <RoleProvider>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route
+              path="/"
+              element={
+                <AuthenticatedRoute>
+                  <Index />
+                </AuthenticatedRoute>
+              }
+            />
+            <Route
+              path="/crm"
+              element={
+                <AuthenticatedRoute>
+                  <ProtectedRoute allowed={["Admin", "Manager"]}>
+                    <Crm />
+                  </ProtectedRoute>
+                </AuthenticatedRoute>
+              }
+            />
+            <Route
+              path="/projects"
+              element={
+                <AuthenticatedRoute>
+                  <ProtectedRoute allowed={["Admin", "Manager", "Team Member", "Client"]}>
+                    <Projects />
+                  </ProtectedRoute>
+                </AuthenticatedRoute>
+              }
+            />
+            <Route
+              path="/billing"
+              element={
+                <AuthenticatedRoute>
+                  <ProtectedRoute allowed={["Admin", "Accountant", "Manager", "Client"]}>
+                    <Billing />
+                  </ProtectedRoute>
+                </AuthenticatedRoute>
+              }
+            />
+            <Route
+              path="/reports"
+              element={
+                <AuthenticatedRoute>
+                  <ProtectedRoute allowed={["Admin", "Manager", "Accountant"]}>
+                    <Reports />
+                  </ProtectedRoute>
+                </AuthenticatedRoute>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <AuthenticatedRoute>
+                  <ProtectedRoute allowed={["Admin", "Manager"]}>
+                    <Settings />
+                  </ProtectedRoute>
+                </AuthenticatedRoute>
+              }
+            />
 
-          {/* Optional direct route for the AccessDenied page */}
-          <Route path="/no-access" element={<AccessDenied />} />
+            {/* Optional direct route for the AccessDenied page */}
+            <Route path="/no-access" element={<AccessDenied />} />
 
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </RoleProvider>
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </RoleProvider>
+      </SupabaseSessionProvider>
     </BrowserRouter>
   );
 }
