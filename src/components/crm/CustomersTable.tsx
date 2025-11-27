@@ -136,6 +136,23 @@ const CustomersTable: React.FC = () => {
     setPage(1);
   }, [query, sortKey, sortDir, pageSize, selectedTags, segment, dateRange]);
 
+  // Add helper to toggle a tag in the filter list (case-insensitive)
+  const toggleTagInFilter = (tag: string) => {
+    setSelectedTags((prev) => {
+      const lowerTag = tag.toLowerCase();
+      const has = prev.some((t) => t.toLowerCase() === lowerTag);
+      return has ? prev.filter((t) => t.toLowerCase() !== lowerTag) : [...prev, tag];
+    });
+  };
+
+  // Add helper to reset all filters
+  const resetFilters = () => {
+    setQuery("");
+    setSelectedTags([]);
+    setSegment("all");
+    setDateRange(undefined);
+  };
+
   const addCustomer = async () => {
     const n = name.trim();
     const e = email.trim();
@@ -478,6 +495,11 @@ const CustomersTable: React.FC = () => {
                 )}
               </div>
             </div>
+            <div className="flex justify-end">
+              <Button variant="ghost" size="sm" onClick={resetFilters}>
+                Reset filters
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -699,11 +721,20 @@ const CustomersTable: React.FC = () => {
                       ) : c.tags.length === 0 ? (
                         <span className="text-xs text-muted-foreground">—</span>
                       ) : (
-                        c.tags.map((t, i) => (
-                          <Badge key={`${c.id}-tag-${i}`} variant="secondary" className="px-2">
-                            {t}
-                          </Badge>
-                        ))
+                        c.tags.map((t, i) => {
+                          const active = selectedTags.some((st) => st.toLowerCase() === t.toLowerCase());
+                          return (
+                            <Badge
+                              key={`${c.id}-tag-${i}`}
+                              variant="secondary"
+                              className={`px-2 cursor-pointer ${active ? "ring-1 ring-primary" : ""}`}
+                              onClick={() => toggleTagInFilter(t)}
+                              title={active ? "Remove tag filter" : "Filter by tag"}
+                            >
+                              {t}
+                            </Badge>
+                          );
+                        })
                       )}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
