@@ -33,6 +33,7 @@ import {
   UICustomer as Customer,
 } from "@/data/customers";
 import { supabase } from "@/integrations/supabase/client";
+import TagFilter from "@/components/crm/TagFilter";
 
 const CustomersTable: React.FC = () => {
   const navigate = useNavigate();
@@ -123,7 +124,7 @@ const CustomersTable: React.FC = () => {
   // Reset page when filters/sorting/page size changes
   React.useEffect(() => {
     setPage(1);
-  }, [query, sortKey, sortDir, pageSize]);
+  }, [query, sortKey, sortDir, pageSize, selectedTags, segment]);
 
   const addCustomer = async () => {
     const n = name.trim();
@@ -158,8 +159,20 @@ const CustomersTable: React.FC = () => {
   };
 
   const filtered = customers.filter((c) => {
-    if (!query.trim()) return true;
-    const q = query.toLowerCase();
+    // segment filter
+    if (segment === "with_tags" && c.tags.length === 0) return false;
+    if (segment === "without_tags" && c.tags.length > 0) return false;
+    
+    // selected tags: require all selected tags to be present
+    if (selectedTags.length > 0) {
+      const set = new Set(c.tags.map((t) => t.toLowerCase()));
+      const hasAll = selectedTags.every((t) => set.has(t.toLowerCase()));
+      if (!hasAll) return false;
+    }
+    
+    // text query
+    const q = query.trim().toLowerCase();
+    if (!q) return true;
     return (
       c.name.toLowerCase().includes(q) ||
       c.email.toLowerCase().includes(q) ||
@@ -289,6 +302,15 @@ const CustomersTable: React.FC = () => {
     setSingleDeleteId(null);
   };
 
+  const [selectedTags, setSelectedTags] = React.useState<string[]>([]);
+  const [segment, setSegment] = React.useState<"all" | "with_tags" | "without_tags">("all");
+
+  const availableTags = React.useMemo(() => {
+    const s = new Set<string>();
+    customers.forEach((c) => c.tags.forEach((t) => s.add(t)));
+    return Array.from(s).sort((a, b) => a.localeCompare(b));
+  }, [customers]);
+
   if (sessionLoading || loading) {
     return (
       <Card>
@@ -342,6 +364,29 @@ const CustomersTable: React.FC = () => {
               <Plus className="h-4 w-4" />
               Add
             </Button>
+          </div>
+        </div>
+
+        {/* Tag filter + segment controls */}
+        <div className="grid gap-3 sm:grid-cols-[1fr_220px]">
+          <TagFilter
+            availableTags={availableTags}
+            selected={selectedTags}
+            onChange={setSelectedTags}
+            onClear={() => setSelectedTags([])}
+          />
+          <div className="space-y-2">
+            <div className="text-sm font-medium">Segment</div>
+            <Select value={segment} onValueChange={(v) => setSegment(v as typeof segment)}>
+              <SelectTrigger>
+                <SelectValue placeholder="All" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All customers</SelectItem>
+                <SelectItem value="with_tags">With tags</SelectItem>
+                <SelectItem value="without_tags">Without tags</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
