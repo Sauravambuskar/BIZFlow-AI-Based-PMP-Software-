@@ -34,6 +34,7 @@ import {
 } from "@/data/customers";
 import { supabase } from "@/integrations/supabase/client";
 import TagFilter from "@/components/crm/TagFilter";
+import TagChipsEditor from "@/components/crm/TagChipsEditor";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import type { DateRange } from "react-day-picker";
@@ -60,7 +61,7 @@ const CustomersTable: React.FC = () => {
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [editName, setEditName] = React.useState("");
   const [editEmail, setEditEmail] = React.useState("");
-  const [editTags, setEditTags] = React.useState("");
+  const [editTagsArr, setEditTagsArr] = React.useState<string[]>([]);
 
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
   const [confirmOpen, setConfirmOpen] = React.useState(false);
@@ -230,14 +231,14 @@ const CustomersTable: React.FC = () => {
     setEditingId(c.id);
     setEditName(c.name);
     setEditEmail(c.email);
-    setEditTags(c.tags.join(", "));
+    setEditTagsArr(c.tags);
   };
 
   const cancelEdit = () => {
     setEditingId(null);
     setEditName("");
     setEditEmail("");
-    setEditTags("");
+    setEditTagsArr([]);
   };
 
   const saveEdit = async () => {
@@ -245,11 +246,7 @@ const CustomersTable: React.FC = () => {
     const n = editName.trim();
     const e = editEmail.trim();
     if (!n || !e) return;
-    const newTags = editTags
-      .split(",")
-      .map((t) => t.trim())
-      .filter(Boolean);
-    const updated = await updateCustomerApi(editingId, { name: n, email: e, tags: newTags });
+    const updated = await updateCustomerApi(editingId, { name: n, email: e, tags: editTagsArr });
     setCustomers((prev) =>
       prev.map((c) => (c.id === editingId ? updated : c)),
     );
@@ -694,10 +691,10 @@ const CustomersTable: React.FC = () => {
                     </TableCell>
                     <TableCell className="flex flex-wrap gap-1">
                       {isEditing ? (
-                        <Input
-                          placeholder="tag1, tag2"
-                          value={editTags}
-                          onChange={(e) => setEditTags(e.target.value)}
+                        <TagChipsEditor
+                          value={editTagsArr}
+                          onChange={setEditTagsArr}
+                          placeholder="Add tag"
                         />
                       ) : c.tags.length === 0 ? (
                         <span className="text-xs text-muted-foreground">—</span>
