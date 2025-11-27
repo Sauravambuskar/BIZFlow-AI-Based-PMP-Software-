@@ -50,6 +50,8 @@ const CustomersTable: React.FC = () => {
   const [sortDir, setSortDir] = React.useState<"asc" | "desc">("asc");
   const [pageSize, setPageSize] = React.useState<number>(8);
   const [page, setPage] = React.useState<number>(1);
+  const [selectedTags, setSelectedTags] = React.useState<string[]>([]);
+  const [segment, setSegment] = React.useState<"all" | "with_tags" | "without_tags">("all");
 
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [editName, setEditName] = React.useState("");
@@ -60,6 +62,9 @@ const CustomersTable: React.FC = () => {
   const [confirmOpen, setConfirmOpen] = React.useState(false);
   const [singleConfirmOpen, setSingleConfirmOpen] = React.useState(false);
   const [singleDeleteId, setSingleDeleteId] = React.useState<string | null>(null);
+  // Bulk tag actions
+  const [bulkAddTags, setBulkAddTags] = React.useState("");
+  const [bulkRemoveTags, setBulkRemoveTags] = React.useState("");
 
   const [loading, setLoading] = React.useState(true);
 
@@ -302,8 +307,43 @@ const CustomersTable: React.FC = () => {
     setSingleDeleteId(null);
   };
 
-  const [selectedTags, setSelectedTags] = React.useState<string[]>([]);
-  const [segment, setSegment] = React.useState<"all" | "with_tags" | "without_tags">("all");
+  const parseTags = (s: string) =>
+    s
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean);
+
+  const addTagsToSelected = async () => {
+    const ids = Array.from(selected);
+    const toAdd = parseTags(bulkAddTags);
+    if (ids.length === 0 || toAdd.length === 0) return;
+    for (const id of ids) {
+      const cur = customers.find((c) => c.id === id);
+      if (!cur) continue;
+      const set = new Set<string>(cur.tags);
+      toAdd.forEach((t) => set.add(t));
+      const nextTags = Array.from(set);
+      const updated = await updateCustomerApi(id, { tags: nextTags });
+      setCustomers((prev) => prev.map((c) => (c.id === id ? updated : c)));
+    }
+    showSuccess("Tags added to selected customers");
+    setBulkAddTags("");
+  };
+
+  const removeTagsFromSelected = async () => {
+    const ids = Array.from(selected);
+    const toRemove = new Set(parseTags(bulkRemoveTags));
+    if (ids.length === 0 || toRemove.size === 0) return;
+    for (const id of ids) {
+      const cur = customers.find((c) => c.id === id);
+      if (!cur) continue;
+      const nextTags = cur.tags.filter((t) => !toRemove.has(t));
+      const updated = await updateCustomerApi(id, { tags: nextTags });
+      setCustomers((prev) => prev.map((c) => (c.id === id ? updated : c)));
+    }
+    showSuccess("Tags removed from selected customers");
+    setBulkRemoveTags("");
+  };
 
   const availableTags = React.useMemo(() => {
     const s = new Set<string>();
@@ -473,6 +513,36 @@ const CustomersTable: React.FC = () => {
               Delete Selected
             </Button>
           </div>
+        </div>
+
+        {/* Bulk tag tools */}
+        <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto_auto]">
+          <Input
+            placeholder="Add tags to selected (comma separated)"
+            value={bulkAddTags}
+            onChange={(e) => setBulkAddTags(e.target.value)}
+          />
+          <Input
+            placeholder="Remove tags from selected (comma separated)"
+            value={bulkRemoveTags}
+            onChange={(e) => setBulkRemoveTags(e.target.value)}
+          />
+          <Button
+            variant="outline"
+            className="whitespace-nowrap"
+            onClick={addTagsToSelected}
+            disabled={selected.size === 0 || !bulkAddTags.trim()}
+          >
+            Add Tags
+          </Button>
+          <Button
+            variant="outline"
+            className="whitespace-nowrap"
+            onClick={removeTagsFromSelected}
+            disabled={selected.size === 0 || !bulkRemoveTags.trim()}
+          >
+            Remove Tags
+          </Button>
         </div>
 
         <div className="overflow-x-auto">
