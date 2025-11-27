@@ -34,6 +34,9 @@ import {
 } from "@/data/customers";
 import { supabase } from "@/integrations/supabase/client";
 import TagFilter from "@/components/crm/TagFilter";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import type { DateRange } from "react-day-picker";
 
 const CustomersTable: React.FC = () => {
   const navigate = useNavigate();
@@ -52,6 +55,7 @@ const CustomersTable: React.FC = () => {
   const [page, setPage] = React.useState<number>(1);
   const [selectedTags, setSelectedTags] = React.useState<string[]>([]);
   const [segment, setSegment] = React.useState<"all" | "with_tags" | "without_tags">("all");
+  const [dateRange, setDateRange] = React.useState<DateRange | undefined>();
 
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [editName, setEditName] = React.useState("");
@@ -129,7 +133,7 @@ const CustomersTable: React.FC = () => {
   // Reset page when filters/sorting/page size changes
   React.useEffect(() => {
     setPage(1);
-  }, [query, sortKey, sortDir, pageSize, selectedTags, segment]);
+  }, [query, sortKey, sortDir, pageSize, selectedTags, segment, dateRange]);
 
   const addCustomer = async () => {
     const n = name.trim();
@@ -173,6 +177,14 @@ const CustomersTable: React.FC = () => {
       const set = new Set(c.tags.map((t) => t.toLowerCase()));
       const hasAll = selectedTags.every((t) => set.has(t.toLowerCase()));
       if (!hasAll) return false;
+    }
+    
+    // created date range filter (inclusive)
+    if (dateRange?.from || dateRange?.to) {
+      const created = new Date(c.createdAt).getTime();
+      const from = dateRange?.from ? new Date(dateRange.from).setHours(0, 0, 0, 0) : -Infinity;
+      const to = dateRange?.to ? new Date(dateRange.to).setHours(23, 59, 59, 999) : Infinity;
+      if (!(created >= from && created <= to)) return false;
     }
     
     // text query
@@ -407,26 +419,68 @@ const CustomersTable: React.FC = () => {
           </div>
         </div>
 
-        {/* Tag filter + segment controls */}
-        <div className="grid gap-3 sm:grid-cols-[1fr_220px]">
+        {/* Tag filter + segment/date controls */}
+        <div className="grid gap-3 sm:grid-cols-[1fr_260px]">
           <TagFilter
             availableTags={availableTags}
             selected={selectedTags}
             onChange={setSelectedTags}
             onClear={() => setSelectedTags([])}
           />
-          <div className="space-y-2">
-            <div className="text-sm font-medium">Segment</div>
-            <Select value={segment} onValueChange={(v) => setSegment(v as typeof segment)}>
-              <SelectTrigger>
-                <SelectValue placeholder="All" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All customers</SelectItem>
-                <SelectItem value="with_tags">With tags</SelectItem>
-                <SelectItem value="without_tags">Without tags</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <div className="text-sm font-medium">Segment</div>
+              <Select value={segment} onValueChange={(v) => setSegment(v as typeof segment)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All customers</SelectItem>
+                  <SelectItem value="with_tags">With tags</SelectItem>
+                  <SelectItem value="without_tags">Without tags</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <div className="text-sm font-medium">Created date</div>
+              <div className="flex items-center gap-2">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start text-left font-normal"
+                    >
+                      {dateRange?.from ? (
+                        dateRange.to ? (
+                          <>
+                            {format(dateRange.from, "MMM d, yyyy")} - {format(dateRange.to, "MMM d, yyyy")}
+                          </>
+                        ) : (
+                          <>From {format(dateRange.from, "MMM d, yyyy")}</>
+                        )
+                      ) : (
+                        <span>Pick a date range</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      initialFocus
+                      mode="range"
+                      defaultMonth={dateRange?.from}
+                      selected={dateRange}
+                      onSelect={setDateRange}
+                      numberOfMonths={2}
+                    />
+                  </PopoverContent>
+                </Popover>
+                {(dateRange?.from || dateRange?.to) && (
+                  <Button variant="ghost" size="sm" onClick={() => setDateRange(undefined)}>
+                    Clear
+                  </Button>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 
