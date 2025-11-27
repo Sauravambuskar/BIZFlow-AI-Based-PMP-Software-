@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import TagChipsEditor from "@/components/crm/TagChipsEditor";
 
 const schema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -49,12 +50,12 @@ const CustomerForm: React.FC<Props> = ({ defaultValues, submitting = false, subm
     mode: "onChange",
   });
 
+  const [tags, setTags] = React.useState<string[]>(defaultValues.tags);
+  React.useEffect(() => {
+    setTags(defaultValues.tags);
+  }, [defaultValues.tags]);
+
   const handleSubmit = (values: CustomerFormValues) => {
-    const tags =
-      values.tagsString
-        ?.split(",")
-        .map((t) => t.trim())
-        .filter(Boolean) ?? [];
     return onSubmit({ name: values.name.trim(), email: values.email.trim(), tags });
   };
 
@@ -94,9 +95,18 @@ const CustomerForm: React.FC<Props> = ({ defaultValues, submitting = false, subm
             <FormItem>
               <FormLabel>Tags</FormLabel>
               <FormControl>
-                <Input placeholder="vip, enterprise, west" {...field} />
+                <div>
+                  <TagChipsEditor
+                    value={tags}
+                    onChange={(next) => {
+                      setTags(next);
+                      field.onChange(next.join(", "));
+                    }}
+                    placeholder="Add tag"
+                  />
+                </div>
               </FormControl>
-              <FormDescription>Separate tags with commas.</FormDescription>
+              <FormDescription>Press Enter or comma to add; Backspace removes last when input is empty.</FormDescription>
               <FormMessage />
             </FormItem>
           )}
