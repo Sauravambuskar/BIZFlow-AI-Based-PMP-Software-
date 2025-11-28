@@ -29,7 +29,6 @@ import {
   Settings,
 } from "lucide-react";
 import { useRole } from "@/context/role-context";
-import { HoleBackground } from "@/components/HoleBackground";
 
 type AppLayoutProps = {
   children: React.ReactNode;
@@ -50,67 +49,78 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const settingsItems = [{ label: "Preferences", icon: <Settings />, to: "/settings", roles: ["Admin", "Manager"] }];
 
   return (
-    <HoleBackground className="min-h-screen bg-background">
-      <SidebarProvider defaultOpen>
-        <Sidebar variant="floating">
-          <SidebarHeader>
-            <SidebarGroupLabel className="font-semibold">Main</SidebarGroupLabel>
-          </SidebarHeader>
-          <SidebarContent>
-            <SidebarGroup>
-              <SidebarMenu>
-                {mainItems
-                  .filter((i) => i.roles.includes(role))
-                  .map((item) => {
-                    const isActive = location.pathname === item.to;
-                    return (
-                      <SidebarMenuItem key={item.to}>
-                        <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}>
-                          <Link to={item.to}>
-                            {item.icon}
-                            <span>{item.label}</span>
-                            {item.label === "Dashboard" ? <SidebarMenuBadge>4</SidebarMenuBadge> : null}
-                          </Link>
-                        </SidebarMenuButton>
-                        <SidebarMenuAction aria-label="Pin" title="Pin" />
-                      </SidebarMenuItem>
-                    );
-                  })}
-              </SidebarMenu>
-            </SidebarGroup>
-            <SidebarSeparator />
-            <SidebarGroup>
-              <SidebarGroupLabel className="font-semibold">Settings</SidebarGroupLabel>
-              <SidebarMenu>
-                {settingsItems
-                  .filter((i) => i.roles.includes(role))
-                  .map((item) => {
-                    const isActive = location.pathname === item.to;
-                    return (
-                      <SidebarMenuItem key={item.to}>
-                        <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}>
-                          <Link to={item.to}>
-                            {item.icon}
-                            <span>{item.label}</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    );
-                  })}
-              </SidebarMenu>
-            </SidebarGroup>
-          </SidebarContent>
-          <SidebarFooter>
-            <div className="text-xs text-muted-foreground px-2">Powered by BizFlow</div>
-          </SidebarFooter>
-        </Sidebar>
+    <div
+      className="min-h-screen bg-background relative bg-cover bg-center bg-no-repeat"
+      style={{
+        backgroundImage:
+          'url("https://static.vecteezy.com/system/resources/previews/023/883/544/non_2x/abstract-background-illustration-abstract-blue-background-illustration-simple-blue-background-for-wallpaper-display-landing-page-banner-or-layout-design-graphic-for-display-free-vector.jpg")',
+      }}
+    >
+      {/* Soft overlay for readability */}
+      <div className="absolute inset-0 bg-white/70 dark:bg-black/60" aria-hidden="true" />
 
-        <SidebarInset>
-          <BrandHeader />
-          <div className="p-4 md:p-6 space-y-6">{children}</div>
-        </SidebarInset>
-      </SidebarProvider>
-    </HoleBackground>
+      <div className="relative z-10">
+        <SidebarProvider defaultOpen>
+          <Sidebar variant="floating">
+            <SidebarHeader>
+              <SidebarGroupLabel className="font-semibold">Main</SidebarGroupLabel>
+            </SidebarHeader>
+            <SidebarContent>
+              <SidebarGroup>
+                <SidebarMenu>
+                  {mainItems
+                    .filter((i) => i.roles.includes(role))
+                    .map((item) => {
+                      const isActive = location.pathname === item.to;
+                      return (
+                        <SidebarMenuItem key={item.to}>
+                          <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}>
+                            <Link to={item.to}>
+                              {item.icon}
+                              <span>{item.label}</span>
+                              {item.label === "Dashboard" ? <SidebarMenuBadge>4</SidebarMenuBadge> : null}
+                            </Link>
+                          </SidebarMenuButton>
+                          <SidebarMenuAction aria-label="Pin" title="Pin" />
+                        </SidebarMenuItem>
+                      );
+                    })}
+                </SidebarMenu>
+              </SidebarGroup>
+              <SidebarSeparator />
+              <SidebarGroup>
+                <SidebarGroupLabel className="font-semibold">Settings</SidebarGroupLabel>
+                <SidebarMenu>
+                  {settingsItems
+                    .filter((i) => i.roles.includes(role))
+                    .map((item) => {
+                      const isActive = location.pathname === item.to;
+                      return (
+                        <SidebarMenuItem key={item.to}>
+                          <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}>
+                            <Link to={item.to}>
+                              {item.icon}
+                              <span>{item.label}</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      );
+                    })}
+                </SidebarMenu>
+              </SidebarGroup>
+            </SidebarContent>
+            <SidebarFooter>
+              <div className="text-xs text-muted-foreground px-2">Powered by BizFlow</div>
+            </SidebarFooter>
+          </Sidebar>
+
+          <SidebarInset>
+            <BrandHeader />
+            <div className="p-4 md:p-6 space-y-6">{children}</div>
+          </SidebarInset>
+        </SidebarProvider>
+      </div>
+    </div>
   );
 };
 
