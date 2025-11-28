@@ -50,15 +50,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
   return (
     <div
-      className="min-h-screen bg-background relative bg-cover bg-center bg-no-repeat"
-      style={{
-        backgroundImage:
-          'url("https://static.vecteezy.com/system/resources/previews/023/883/544/non_2x/abstract-background-illustration-abstract-blue-background-illustration-simple-blue-background-for-wallpaper-display-landing-page-banner-or-layout-design-graphic-for-display-free-vector.jpg")',
-      }}
+      className="min-h-screen bg-background relative"
     >
-      {/* Soft overlay for readability */}
-      <div className="absolute inset-0 bg-white/70 dark:bg-black/60" aria-hidden="true" />
-
       <div className="relative z-10">
         <SidebarProvider defaultOpen>
           <Sidebar variant="floating">
