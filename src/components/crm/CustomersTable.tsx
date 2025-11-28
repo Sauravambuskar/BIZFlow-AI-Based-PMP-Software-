@@ -40,6 +40,7 @@ import { Calendar } from "@/components/ui/calendar";
 import type { DateRange } from "react-day-picker";
 import ImportCustomersDialog from "@/components/crm/ImportCustomersDialog";
 import SaveSegmentDialog from "@/components/crm/SaveSegmentDialog";
+import { listSegments, UISegment } from "@/data/segments";
 
 const CustomersTable: React.FC = () => {
   const navigate = useNavigate();
@@ -57,6 +58,8 @@ const CustomersTable: React.FC = () => {
   const [selectedTags, setSelectedTags] = React.useState<string[]>([]);
   const [segment, setSegment] = React.useState<"all" | "with_tags" | "without_tags">("all");
   const [dateRange, setDateRange] = React.useState<DateRange | undefined>();
+  const [segmentsList, setSegmentsList] = React.useState<UISegment[]>([]);
+  const [selectedSegmentId, setSelectedSegmentId] = React.useState<string | "none">("none");
 
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [editName, setEditName] = React.useState("");
@@ -171,6 +174,39 @@ const CustomersTable: React.FC = () => {
       setSortKey(key);
       setSortDir("asc");
     }
+  };
+
+  // Load saved segments for this user
+  React.useEffect(() => {
+    if (!session?.user?.id) {
+      setSegmentsList([]);
+      setSelectedSegmentId("none");
+      return;
+    }
+    (async () => {
+      const segs = await listSegments(session.user.id);
+      setSegmentsList(segs);
+    })();
+  }, [session?.user?.id]);
+
+  // Apply a segment to current filters
+  const applySegmentById = (id: string | "none") => {
+    setSelectedSegmentId(id);
+    if (id === "none") return;
+    const seg = segmentsList.find((s) => s.id === id);
+    if (!seg) return;
+    const r = seg.rules;
+    setQuery(r.query || "");
+    setSelectedTags(r.tags || []);
+    setSegment(r.segment);
+    setDateRange(() => {
+      const from = r.dateFrom ? new Date(r.dateFrom) : undefined;
+      const to = r.dateTo ? new Date(r.dateTo) : undefined;
+      if (!from && !to) return undefined;
+      return { from, to };
+    });
+    setFiltersOpen(true);
+    showSuccess(`Applied segment: ${seg.name}`);
   };
 
   const filtered = customers.filter((c) => {
@@ -410,6 +446,22 @@ const CustomersTable: React.FC = () => {
             <Button variant="outline" onClick={() => setSaveSegOpen(true)}>
               Save Segment
             </Button>
+            <Select
+              value={selectedSegmentId}
+              onValueChange={(v) => applySegmentById(v as string)}
+            >
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Apply Segment" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No segment</SelectItem>
+                {segmentsList.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
@@ -480,6 +532,20 @@ const CustomersTable: React.FC = () => {
                 <Button variant="ghost" size="sm" onClick={resetFilters}>
                   Reset filters
                 </Button>
+                {selectedSegmentId !== "none" && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="ml-2"
+                    onClick={() => {
+                      setSelectedSegmentId("none");
+                      resetFilters();
+                      showSuccess("Cleared segment and filters");
+                    }}
+                  >
+                    Clear segment
+                  </Button>
+                )}
               </div>
             </div>
           </div>
