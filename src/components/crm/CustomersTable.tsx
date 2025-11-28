@@ -38,6 +38,8 @@ import TagChipsEditor from "@/components/crm/TagChipsEditor";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import type { DateRange } from "react-day-picker";
+import ImportCustomersDialog from "@/components/crm/ImportCustomersDialog";
+import SaveSegmentDialog from "@/components/crm/SaveSegmentDialog";
 
 const CustomersTable: React.FC = () => {
   const navigate = useNavigate();
@@ -68,6 +70,8 @@ const CustomersTable: React.FC = () => {
   // Bulk tag actions
   const [bulkAddTags, setBulkAddTags] = React.useState("");
   const [bulkRemoveTags, setBulkRemoveTags] = React.useState("");
+  const [importOpen, setImportOpen] = React.useState(false);
+  const [saveSegOpen, setSaveSegOpen] = React.useState(false);
 
   const [loading, setLoading] = React.useState(true);
 
@@ -399,6 +403,12 @@ const CustomersTable: React.FC = () => {
             </Button>
             <Button variant="secondary" onClick={copyFiltered}>
               Copy CSV
+            </Button>
+            <Button variant="outline" onClick={() => setImportOpen(true)}>
+              Import CSV
+            </Button>
+            <Button variant="outline" onClick={() => setSaveSegOpen(true)}>
+              Save Segment
             </Button>
           </div>
         </div>
@@ -811,6 +821,19 @@ const CustomersTable: React.FC = () => {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        <ImportCustomersDialog open={importOpen} onOpenChange={setImportOpen} />
+
+        <SaveSegmentDialog
+          open={saveSegOpen}
+          onOpenChange={setSaveSegOpen}
+          snapshot={{
+            query,
+            selectedTags,
+            segment,
+            dateRange,
+          }}
+        />
       </CardContent>
     </Card>
   );

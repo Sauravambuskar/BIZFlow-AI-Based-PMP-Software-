@@ -10,6 +10,7 @@ import CustomersTable from "@/components/crm/CustomersTable";
 import LeadsPipeline from "@/components/crm/LeadsPipeline";
 import AddCustomerDialog from "@/components/crm/AddCustomerDialog";
 import NewLeadDialog from "@/components/crm/NewLeadDialog";
+import SegmentsManager from "@/components/crm/SegmentsManager";
 
 const Crm: React.FC = () => {
   const [addCustomerOpen, setAddCustomerOpen] = React.useState(false);
@@ -51,21 +52,7 @@ const Crm: React.FC = () => {
           </TabsContent>
 
           <TabsContent value="segments" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>
-                  <div className="inline-flex items-center gap-2">
-                    <Tags className="h-4 w-4 text-fuchsia-500" />
-                    Segments & Tags
-                  </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
-                  Segment customers by industry, tags, and custom fields.
-                </div>
-              </CardContent>
-            </Card>
+            <SegmentsManager />
           </TabsContent>
         </Tabs>
       </div>
