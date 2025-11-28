@@ -99,3 +99,8 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Martian Mono utility */
+.font-martian {
+  font-family: "Martian Mono", monospace;
+}
