@@ -45,9 +45,7 @@ const CustomersTable: React.FC = () => {
 
   const [customers, setCustomers] = React.useState<Customer[]>([]);
   const [query, setQuery] = React.useState("");
-  const [name, setName] = React.useState("");
-  const [email, setEmail] = React.useState("");
-  const [tagsInput, setTagsInput] = React.useState("");
+  const [filtersOpen, setFiltersOpen] = React.useState(false);
 
   // sorting, pagination, and inline edit state
   const [sortKey, setSortKey] = React.useState<"name" | "email" | "createdAt">("name");
@@ -153,21 +151,7 @@ const CustomersTable: React.FC = () => {
     setDateRange(undefined);
   };
 
-  const addCustomer = async () => {
-    const n = name.trim();
-    const e = email.trim();
-    if (!n || !e || !session?.user?.id) return;
-    const tags = tagsInput
-      .split(",")
-      .map((t) => t.trim())
-      .filter(Boolean);
-    const created = await addCustomerApi(session.user.id, { name: n, email: e, tags });
-    setCustomers((prev) => [created, ...prev]);
-    setName("");
-    setEmail("");
-    setTagsInput("");
-    showSuccess("Customer added");
-  };
+  // Removed inline quick-add customer; use the Add Customer button in the Customers tab.
 
   const removeCustomer = async (id: string) => {
     await deleteCustomerApi(id);
@@ -398,169 +382,124 @@ const CustomersTable: React.FC = () => {
         <CardTitle>Customers</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Top controls: search, add new */}
-        <div className="grid gap-2 sm:grid-cols-2">
+        {/* Toolbar: search, filters toggle, exports */}
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <Input
             placeholder="Search customers (name, email, tags)"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            className="w-full sm:w-[420px]"
           />
-          <div className="flex gap-2">
-            <Input
-              placeholder="Name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="flex-1"
-            />
-            <Input
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="flex-1"
-              type="email"
-            />
-          </div>
-          <div className="sm:col-span-2 flex items-center gap-2">
-            <Input
-              placeholder="Tags (comma separated)"
-              value={tagsInput}
-              onChange={(e) => setTagsInput(e.target.value)}
-            />
-            <Button onClick={addCustomer} className="whitespace-nowrap">
-              <Plus className="h-4 w-4" />
-              Add
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setFiltersOpen((o) => !o)}>
+              {filtersOpen ? "Hide Filters" : "Show Filters"}
+            </Button>
+            <Button variant="outline" onClick={exportFiltered}>
+              Export CSV
+            </Button>
+            <Button variant="secondary" onClick={copyFiltered}>
+              Copy CSV
             </Button>
           </div>
         </div>
 
-        {/* Tag filter + segment/date controls */}
-        <div className="grid gap-3 sm:grid-cols-[1fr_260px]">
-          <TagFilter
-            availableTags={availableTags}
-            selected={selectedTags}
-            onChange={setSelectedTags}
-            onClear={() => setSelectedTags([])}
-          />
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <div className="text-sm font-medium">Segment</div>
-              <Select value={segment} onValueChange={(v) => setSegment(v as typeof segment)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All customers</SelectItem>
-                  <SelectItem value="with_tags">With tags</SelectItem>
-                  <SelectItem value="without_tags">Without tags</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <div className="text-sm font-medium">Created date</div>
-              <div className="flex items-center gap-2">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start text-left font-normal"
-                    >
-                      {dateRange?.from ? (
-                        dateRange.to ? (
-                          <>
-                            {format(dateRange.from, "MMM d, yyyy")} - {format(dateRange.to, "MMM d, yyyy")}
-                          </>
+        {/* Advanced filters */}
+        {filtersOpen && (
+          <div className="grid gap-3 sm:grid-cols-[1fr_260px]">
+            <TagFilter
+              availableTags={availableTags}
+              selected={selectedTags}
+              onChange={setSelectedTags}
+              onClear={() => setSelectedTags([])}
+            />
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <div className="text-sm font-medium">Segment</div>
+                <Select value={segment} onValueChange={(v) => setSegment(v as typeof segment)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All customers</SelectItem>
+                    <SelectItem value="with_tags">With tags</SelectItem>
+                    <SelectItem value="without_tags">Without tags</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <div className="text-sm font-medium">Created date</div>
+                <div className="flex items-center gap-2">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start text-left font-normal"
+                      >
+                        {dateRange?.from ? (
+                          dateRange.to ? (
+                            <>
+                              {format(dateRange.from, "MMM d, yyyy")} - {format(dateRange.to, "MMM d, yyyy")}
+                            </>
+                          ) : (
+                            <>From {format(dateRange.from, "MMM d, yyyy")}</>
+                          )
                         ) : (
-                          <>From {format(dateRange.from, "MMM d, yyyy")}</>
-                        )
-                      ) : (
-                        <span>Pick a date range</span>
-                      )}
+                          <span>Pick a date range</span>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        initialFocus
+                        mode="range"
+                        defaultMonth={dateRange?.from}
+                        selected={dateRange}
+                        onSelect={setDateRange}
+                        numberOfMonths={2}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  {(dateRange?.from || dateRange?.to) && (
+                    <Button variant="ghost" size="sm" onClick={() => setDateRange(undefined)}>
+                      Clear
                     </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      initialFocus
-                      mode="range"
-                      defaultMonth={dateRange?.from}
-                      selected={dateRange}
-                      onSelect={setDateRange}
-                      numberOfMonths={2}
-                    />
-                  </PopoverContent>
-                </Popover>
-                {(dateRange?.from || dateRange?.to) && (
-                  <Button variant="ghost" size="sm" onClick={() => setDateRange(undefined)}>
-                    Clear
-                  </Button>
-                )}
+                  )}
+                </div>
+              </div>
+              <div className="flex justify-end">
+                <Button variant="ghost" size="sm" onClick={resetFilters}>
+                  Reset filters
+                </Button>
               </div>
             </div>
-            <div className="flex justify-end">
-              <Button variant="ghost" size="sm" onClick={resetFilters}>
-                Reset filters
-              </Button>
-            </div>
           </div>
+        )}
+
+        {/* Page size */}
+        <div className="flex items-center justify-end gap-2">
+          <span className="text-sm text-muted-foreground">Rows per page</span>
+          <Select
+            value={String(pageSize)}
+            onValueChange={(v) => setPageSize(Number(v))}
+          >
+            <SelectTrigger className="w-[100px]">
+              <SelectValue placeholder={pageSize} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="5">5</SelectItem>
+              <SelectItem value="8">8</SelectItem>
+              <SelectItem value="10">10</SelectItem>
+              <SelectItem value="20">20</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
-        {/* Secondary toolbar: export and page size */}
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex w-full sm:w-auto gap-2">
-            <Button variant="outline" onClick={exportFiltered} className="flex-1 sm:flex-none">
-              Export Filtered CSV
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={copyFiltered}
-              className="flex-1 sm:flex-none"
-            >
-              Copy Filtered CSV
-            </Button>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Rows per page</span>
-            <Select
-              value={String(pageSize)}
-              onValueChange={(v) => setPageSize(Number(v))}
-            >
-              <SelectTrigger className="w-[100px]">
-                <SelectValue placeholder={pageSize} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="5">5</SelectItem>
-                <SelectItem value="8">8</SelectItem>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="20">20</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {/* Bulk actions */}
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div className="text-sm text-muted-foreground">
-            {selected.size > 0 ? `${selected.size} selected` : "No rows selected"}
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" disabled={selected.size === 0} onClick={() => {
-              if (selected.size === 0) return;
-              const rows = customers
-                .filter((c) => selected.has(c.id))
-                .map((c) => ({
-                  name: c.name,
-                  email: c.email,
-                  tags: c.tags.join(", "),
-                  createdAt: c.createdAt,
-                }));
-              exportToCsv("customers-selected.csv", rows);
-            }}>
-              Export Selected CSV
-            </Button>
-            <Button
-              variant="secondary"
-              disabled={selected.size === 0}
-              onClick={async () => {
-                if (selected.size === 0) return;
+        {/* Bulk actions - only visible when rows are selected */}
+        {selected.size > 0 && (
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="text-sm text-muted-foreground">{selected.size} selected</div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={() => {
                 const rows = customers
                   .filter((c) => selected.has(c.id))
                   .map((c) => ({
@@ -569,54 +508,71 @@ const CustomersTable: React.FC = () => {
                     tags: c.tags.join(", "),
                     createdAt: c.createdAt,
                   }));
-                await copyCsvToClipboard(rows);
-                showSuccess("Selected CSV copied to clipboard");
-              }}
+                exportToCsv("customers-selected.csv", rows);
+              }}>
+                Export Selected CSV
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={async () => {
+                  const rows = customers
+                    .filter((c) => selected.has(c.id))
+                    .map((c) => ({
+                      name: c.name,
+                      email: c.email,
+                      tags: c.tags.join(", "),
+                      createdAt: c.createdAt,
+                    }));
+                  await copyCsvToClipboard(rows);
+                  showSuccess("Selected CSV copied to clipboard");
+                }}
+              >
+                Copy Selected CSV
+              </Button>
+              <Button variant="outline" onClick={clearSelection}>
+                Clear Selection
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => setConfirmOpen(true)}
+              >
+                Delete Selected
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Bulk tag tools - only visible when rows are selected */}
+        {selected.size > 0 && (
+          <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto_auto]">
+            <Input
+              placeholder="Add tags to selected (comma separated)"
+              value={bulkAddTags}
+              onChange={(e) => setBulkAddTags(e.target.value)}
+            />
+            <Input
+              placeholder="Remove tags from selected (comma separated)"
+              value={bulkRemoveTags}
+              onChange={(e) => setBulkRemoveTags(e.target.value)}
+            />
+            <Button
+              variant="outline"
+              className="whitespace-nowrap"
+              onClick={addTagsToSelected}
+              disabled={!bulkAddTags.trim()}
             >
-              Copy Selected CSV
-            </Button>
-            <Button variant="outline" disabled={selected.size === 0} onClick={clearSelection}>
-              Clear Selection
+              Add Tags
             </Button>
             <Button
-              variant="destructive"
-              disabled={selected.size === 0}
-              onClick={() => setConfirmOpen(true)}
+              variant="outline"
+              className="whitespace-nowrap"
+              onClick={removeTagsFromSelected}
+              disabled={!bulkRemoveTags.trim()}
             >
-              Delete Selected
+              Remove Tags
             </Button>
           </div>
-        </div>
-
-        {/* Bulk tag tools */}
-        <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto_auto]">
-          <Input
-            placeholder="Add tags to selected (comma separated)"
-            value={bulkAddTags}
-            onChange={(e) => setBulkAddTags(e.target.value)}
-          />
-          <Input
-            placeholder="Remove tags from selected (comma separated)"
-            value={bulkRemoveTags}
-            onChange={(e) => setBulkRemoveTags(e.target.value)}
-          />
-          <Button
-            variant="outline"
-            className="whitespace-nowrap"
-            onClick={addTagsToSelected}
-            disabled={selected.size === 0 || !bulkAddTags.trim()}
-          >
-            Add Tags
-          </Button>
-          <Button
-            variant="outline"
-            className="whitespace-nowrap"
-            onClick={removeTagsFromSelected}
-            disabled={selected.size === 0 || !bulkRemoveTags.trim()}
-          >
-            Remove Tags
-          </Button>
-        </div>
+        )}
 
         <div className="overflow-x-auto">
           <Table>
