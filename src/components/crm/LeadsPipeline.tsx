@@ -68,7 +68,11 @@ const Column: React.FC<{
         </div>
       </div>
       <div className="min-h-[140px] space-y-2">
-        {leads.map((l) => (
+        {leads.length === 0 ? (
+          <div className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">
+            No leads
+          </div>
+        ) : leads.map((l) => (
           <div
             key={l.id}
             draggable
