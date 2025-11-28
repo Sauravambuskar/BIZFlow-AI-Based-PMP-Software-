@@ -64,14 +64,22 @@ function HoleBackground({
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
-    stateRef.current.rect = { width: rect.width, height: rect.height };
+    let width = rect.width;
+    let height = rect.height;
+    // Fallback if layout isn't ready yet
+    if (width === 0 || height === 0) {
+      const parent = canvas.parentElement as HTMLElement | null;
+      width = parent?.clientWidth || window.innerWidth;
+      height = parent?.clientHeight || window.innerHeight;
+    }
+    stateRef.current.rect = { width, height };
     stateRef.current.render = {
-      width: rect.width,
-      height: rect.height,
+      width,
+      height,
       dpi: window.devicePixelRatio || 1,
     };
-    canvas.width = stateRef.current.render.width * stateRef.current.render.dpi;
-    canvas.height = stateRef.current.render.height * stateRef.current.render.dpi;
+    canvas.width = width * stateRef.current.render.dpi;
+    canvas.height = height * stateRef.current.render.dpi;
   }, []);
 
   const setDiscs = React.useCallback(() => {
@@ -111,6 +119,11 @@ function HoleBackground({
 
   const setLines = React.useCallback(() => {
     const { width, height } = stateRef.current.rect;
+    // If size is zero, skip creating the offscreen canvas to avoid drawImage errors
+    if (width <= 0 || height <= 0) {
+      stateRef.current.linesCanvas = null;
+      return;
+    }
     stateRef.current.lines = [];
     const linesAngle = (Math.PI * 2) / numberOfLines;
     for (let i = 0; i < numberOfLines; i++) {
@@ -242,8 +255,9 @@ function HoleBackground({
   );
 
   const drawLines = React.useCallback((ctx: CanvasRenderingContext2D) => {
-    if (stateRef.current.linesCanvas) {
-      ctx.drawImage(stateRef.current.linesCanvas, 0, 0);
+    const lc = stateRef.current.linesCanvas as HTMLCanvasElement | null;
+    if (lc && lc.width > 0 && lc.height > 0) {
+      ctx.drawImage(lc, 0, 0);
     }
   }, []);
 
