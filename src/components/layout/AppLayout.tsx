@@ -29,6 +29,7 @@ import {
   Settings,
 } from "lucide-react";
 import { useRole } from "@/context/role-context";
+import { HoleBackground } from "@/components/HoleBackground";
 
 type AppLayoutProps = {
   children: React.ReactNode;
@@ -49,65 +50,67 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const settingsItems = [{ label: "Preferences", icon: <Settings />, to: "/settings", roles: ["Admin", "Manager"] }];
 
   return (
-    <SidebarProvider defaultOpen>
-      <Sidebar variant="floating">
-        <SidebarHeader>
-          <SidebarGroupLabel className="font-semibold">Main</SidebarGroupLabel>
-        </SidebarHeader>
-        <SidebarContent>
-          <SidebarGroup>
-            <SidebarMenu>
-              {mainItems
-                .filter((i) => i.roles.includes(role))
-                .map((item) => {
-                  const isActive = location.pathname === item.to;
-                  return (
-                    <SidebarMenuItem key={item.to}>
-                      <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}>
-                        <Link to={item.to}>
-                          {item.icon}
-                          <span>{item.label}</span>
-                          {item.label === "Dashboard" ? <SidebarMenuBadge>4</SidebarMenuBadge> : null}
-                        </Link>
-                      </SidebarMenuButton>
-                      <SidebarMenuAction aria-label="Pin" title="Pin" />
-                    </SidebarMenuItem>
-                  );
-                })}
-            </SidebarMenu>
-          </SidebarGroup>
-          <SidebarSeparator />
-          <SidebarGroup>
-            <SidebarGroupLabel className="font-semibold">Settings</SidebarGroupLabel>
-            <SidebarMenu>
-              {settingsItems
-                .filter((i) => i.roles.includes(role))
-                .map((item) => {
-                  const isActive = location.pathname === item.to;
-                  return (
-                    <SidebarMenuItem key={item.to}>
-                      <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}>
-                        <Link to={item.to}>
-                          {item.icon}
-                          <span>{item.label}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  );
-                })}
-            </SidebarMenu>
-          </SidebarGroup>
-        </SidebarContent>
-        <SidebarFooter>
-          <div className="text-xs text-muted-foreground px-2">Powered by BizFlow</div>
-        </SidebarFooter>
-      </Sidebar>
+    <HoleBackground className="min-h-screen bg-background">
+      <SidebarProvider defaultOpen>
+        <Sidebar variant="floating">
+          <SidebarHeader>
+            <SidebarGroupLabel className="font-semibold">Main</SidebarGroupLabel>
+          </SidebarHeader>
+          <SidebarContent>
+            <SidebarGroup>
+              <SidebarMenu>
+                {mainItems
+                  .filter((i) => i.roles.includes(role))
+                  .map((item) => {
+                    const isActive = location.pathname === item.to;
+                    return (
+                      <SidebarMenuItem key={item.to}>
+                        <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}>
+                          <Link to={item.to}>
+                            {item.icon}
+                            <span>{item.label}</span>
+                            {item.label === "Dashboard" ? <SidebarMenuBadge>4</SidebarMenuBadge> : null}
+                          </Link>
+                        </SidebarMenuButton>
+                        <SidebarMenuAction aria-label="Pin" title="Pin" />
+                      </SidebarMenuItem>
+                    );
+                  })}
+              </SidebarMenu>
+            </SidebarGroup>
+            <SidebarSeparator />
+            <SidebarGroup>
+              <SidebarGroupLabel className="font-semibold">Settings</SidebarGroupLabel>
+              <SidebarMenu>
+                {settingsItems
+                  .filter((i) => i.roles.includes(role))
+                  .map((item) => {
+                    const isActive = location.pathname === item.to;
+                    return (
+                      <SidebarMenuItem key={item.to}>
+                        <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}>
+                          <Link to={item.to}>
+                            {item.icon}
+                            <span>{item.label}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+              </SidebarMenu>
+            </SidebarGroup>
+          </SidebarContent>
+          <SidebarFooter>
+            <div className="text-xs text-muted-foreground px-2">Powered by BizFlow</div>
+          </SidebarFooter>
+        </Sidebar>
 
-      <SidebarInset>
-        <BrandHeader />
-        <div className="p-4 md:p-6 space-y-6">{children}</div>
-      </SidebarInset>
-    </SidebarProvider>
+        <SidebarInset>
+          <BrandHeader />
+          <div className="p-4 md:p-6 space-y-6">{children}</div>
+        </SidebarInset>
+      </SidebarProvider>
+    </HoleBackground>
   );
 };
 

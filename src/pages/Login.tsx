@@ -4,10 +4,11 @@ import React from "react";
 import { Auth } from "@supabase/auth-ui-react";
 import { ThemeSupa } from "@supabase/auth-ui-shared";
 import { supabase } from "@/integrations/supabase/client";
+import { HoleBackground } from "@/components/HoleBackground";
 
 const Login: React.FC = () => {
   return (
-    <div className="min-h-screen w-full bg-background">
+    <HoleBackground className="min-h-screen w-full bg-background">
       <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-4">
         <div className="w-full rounded-lg border bg-card p-6 shadow-sm">
           <h1 className="mb-1 text-2xl font-semibold tracking-tight">Sign in</h1>
@@ -41,7 +42,7 @@ const Login: React.FC = () => {
           By continuing you agree to the Terms and Privacy Policy.
         </p>
       </div>
-    </div>
+    </HoleBackground>
   );
 };
 
