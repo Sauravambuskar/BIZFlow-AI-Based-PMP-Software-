@@ -41,6 +41,8 @@ import type { DateRange } from "react-day-picker";
 import ImportCustomersDialog from "@/components/crm/ImportCustomersDialog";
 import SaveSegmentDialog from "@/components/crm/SaveSegmentDialog";
 import { listSegments, UISegment } from "@/data/segments";
+import AddCustomerDialog from "@/components/crm/AddCustomerDialog";
+import ManageTagsDialog from "@/components/crm/ManageTagsDialog";
 
 const CustomersTable: React.FC = () => {
   const navigate = useNavigate();
@@ -75,6 +77,9 @@ const CustomersTable: React.FC = () => {
   const [bulkRemoveTags, setBulkRemoveTags] = React.useState("");
   const [importOpen, setImportOpen] = React.useState(false);
   const [saveSegOpen, setSaveSegOpen] = React.useState(false);
+  // ADD: manage tags and add customer dialog state
+  const [manageTagsOpen, setManageTagsOpen] = React.useState(false);
+  const [addOpen, setAddOpen] = React.useState(false);
 
   const [loading, setLoading] = React.useState(true);
 
@@ -401,6 +406,71 @@ const CustomersTable: React.FC = () => {
     return Array.from(s).sort((a, b) => a.localeCompare(b));
   }, [customers]);
 
+  // ADD: helpers to rename/delete tags across all customers
+  const renameTagEverywhere = async (fromTag: string, toTag: string) => {
+    const fromLower = fromTag.toLowerCase();
+    const toLower = toTag.toLowerCase();
+    const changedIds: string[] = [];
+
+    for (const c of customers) {
+      const hasFrom = c.tags.some((t) => t.toLowerCase() === fromLower);
+      if (!hasFrom) continue;
+      const nextSet = new Set<string>();
+      c.tags.forEach((t) => {
+        if (t.toLowerCase() === fromLower) {
+          nextSet.add(toTag);
+        } else {
+          nextSet.add(t);
+        }
+      });
+      const nextTags = Array.from(nextSet);
+      if (nextTags.join(",") !== c.tags.join(",")) {
+        const updated = await updateCustomerApi(c.id, { tags: nextTags });
+        changedIds.push(c.id);
+        setCustomers((prev) => prev.map((row) => (row.id === c.id ? updated : row)));
+      }
+    }
+
+    // Update current filters if they include the renamed tag
+    setSelectedTags((prev) =>
+      prev.map((t) => (t.toLowerCase() === fromLower ? toTag : t))
+    );
+
+    // Clear selection for changed rows to avoid confusion
+    if (changedIds.length > 0) {
+      setSelected((prev) => {
+        const next = new Set(prev);
+        changedIds.forEach((id) => next.delete(id));
+        return next;
+      });
+    }
+  };
+
+  const deleteTagEverywhere = async (tag: string) => {
+    const targetLower = tag.toLowerCase();
+    const changedIds: string[] = [];
+
+    for (const c of customers) {
+      const hasTag = c.tags.some((t) => t.toLowerCase() === targetLower);
+      if (!hasTag) continue;
+      const nextTags = c.tags.filter((t) => t.toLowerCase() !== targetLower);
+      const updated = await updateCustomerApi(c.id, { tags: nextTags });
+      changedIds.push(c.id);
+      setCustomers((prev) => prev.map((row) => (row.id === c.id ? updated : row)));
+    }
+
+    // If deleted tag is in filters, remove it
+    setSelectedTags((prev) => prev.filter((t) => t.toLowerCase() !== targetLower));
+
+    if (changedIds.length > 0) {
+      setSelected((prev) => {
+        const next = new Set(prev);
+        changedIds.forEach((id) => next.delete(id));
+        return next;
+      });
+    }
+  };
+
   if (sessionLoading || loading) {
     return (
       <Card>
@@ -445,6 +515,13 @@ const CustomersTable: React.FC = () => {
             </Button>
             <Button variant="outline" onClick={() => setSaveSegOpen(true)}>
               Save Segment
+            </Button>
+            <Button variant="default" onClick={() => setAddOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Customer
+            </Button>
+            <Button variant="outline" onClick={() => setManageTagsOpen(true)}>
+              Manage Tags
             </Button>
             <Select
               value={selectedSegmentId}
@@ -899,6 +976,16 @@ const CustomersTable: React.FC = () => {
             segment,
             dateRange,
           }}
+        />
+
+        <AddCustomerDialog open={addOpen} onOpenChange={setAddOpen} />
+
+        <ManageTagsDialog
+          open={manageTagsOpen}
+          onOpenChange={setManageTagsOpen}
+          availableTags={availableTags}
+          onRename={renameTagEverywhere}
+          onDelete={deleteTagEverywhere}
         />
       </CardContent>
     </Card>
