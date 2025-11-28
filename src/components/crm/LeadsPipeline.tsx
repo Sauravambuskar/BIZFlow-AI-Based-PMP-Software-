@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, Pencil, Trash2, Copy } from "lucide-react";
 import { showSuccess } from "@/utils/toast";
 import LeadEditorDialog from "./LeadEditorDialog";
+import NewLeadDialog from "@/components/crm/NewLeadDialog";
 import { exportToCsv, copyCsvToClipboard } from "@/utils/export";
 import {
   AlertDialog,
@@ -134,6 +135,7 @@ const LeadsPipeline: React.FC = () => {
   const [name, setName] = React.useState("");
   const [amount, setAmount] = React.useState<string>("");
   const [editingId, setEditingId] = React.useState<string | null>(null);
+  const [newLeadOpen, setNewLeadOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
   const [confirmClearOpen, setConfirmClearOpen] = React.useState(false);
   const [singleConfirmOpen, setSingleConfirmOpen] = React.useState(false);
@@ -362,13 +364,23 @@ const LeadsPipeline: React.FC = () => {
             <Plus className="h-4 w-4" />
             Add Lead
           </Button>
-          <Button
-            variant="outline"
-            onClick={() => setConfirmClearOpen(true)}
-            className="whitespace-nowrap"
-          >
-            Clear Lost
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setConfirmClearOpen(true)}
+              className="whitespace-nowrap"
+            >
+              Clear Lost
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => setNewLeadOpen(true)}
+              className="whitespace-nowrap"
+            >
+              <Plus className="h-4 w-4" />
+              New Lead
+            </Button>
+          </div>
         </div>
         <div className="grid gap-2 sm:grid-cols-[1fr,auto,auto]">
           <Input
@@ -421,6 +433,7 @@ const LeadsPipeline: React.FC = () => {
             />
           ))}
         </div>
+        <NewLeadDialog open={newLeadOpen} onOpenChange={setNewLeadOpen} />
         <LeadEditorDialog
           open={!!editingId}
           initialName={editingLead?.name ?? ""}
