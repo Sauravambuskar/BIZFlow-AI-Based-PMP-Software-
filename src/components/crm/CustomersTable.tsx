@@ -83,6 +83,70 @@ const CustomersTable: React.FC = () => {
 
   const [loading, setLoading] = React.useState(true);
 
+  // ADD: local storage key for preferences
+  const prefsKey = React.useMemo(() => {
+    return session?.user?.id ? `customers:prefs:${session.user.id}` : null;
+  }, [session?.user?.id]);
+
+  React.useEffect(() => {
+    if (!prefsKey) return;
+    const raw = localStorage.getItem(prefsKey);
+    if (!raw) return;
+    try {
+      const p = JSON.parse(raw) as {
+        query?: string;
+        selectedTags?: string[];
+        segment?: "all" | "with_tags" | "without_tags";
+        dateRange?: { from: string | null; to: string | null } | null;
+        sortKey?: "name" | "email" | "createdAt";
+        sortDir?: "asc" | "desc";
+        pageSize?: number;
+        filtersOpen?: boolean;
+        selectedSegmentId?: string | "none";
+      };
+      setQuery(p.query ?? "");
+      setSelectedTags(p.selectedTags ?? []);
+      setSegment(p.segment ?? "all");
+      if (p.dateRange && (p.dateRange.from || p.dateRange.to)) {
+        setDateRange({
+          from: p.dateRange.from ? new Date(p.dateRange.from) : undefined,
+          to: p.dateRange.to ? new Date(p.dateRange.to) : undefined,
+        });
+      } else {
+        setDateRange(undefined);
+      }
+      setSortKey(p.sortKey ?? "name");
+      setSortDir(p.sortDir ?? "asc");
+      setPageSize(p.pageSize ?? 8);
+      setFiltersOpen(p.filtersOpen ?? false);
+      setSelectedSegmentId(p.selectedSegmentId ?? "none");
+    } catch {
+      // ignore parse errors
+    }
+  }, [prefsKey]);
+
+  // ADD: persist preferences whenever they change
+  React.useEffect(() => {
+    if (!prefsKey) return;
+    const payload = {
+      query,
+      selectedTags,
+      segment,
+      dateRange: dateRange
+        ? {
+            from: dateRange.from ? dateRange.from.toISOString() : null,
+            to: dateRange.to ? dateRange.to.toISOString() : null,
+          }
+        : null,
+      sortKey,
+      sortDir,
+      pageSize,
+      filtersOpen,
+      selectedSegmentId,
+    };
+    localStorage.setItem(prefsKey, JSON.stringify(payload));
+  }, [prefsKey, query, selectedTags, segment, dateRange, sortKey, sortDir, pageSize, filtersOpen, selectedSegmentId]);
+
   React.useEffect(() => {
     if (sessionLoading) return;
     if (!session?.user?.id) {
@@ -623,6 +687,18 @@ const CustomersTable: React.FC = () => {
                     Clear segment
                   </Button>
                 )}
+                {/* ADD: clear saved view */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="ml-2"
+                  onClick={() => {
+                    if (prefsKey) localStorage.removeItem(prefsKey);
+                    showSuccess("Cleared saved view");
+                  }}
+                >
+                  Clear saved view
+                </Button>
               </div>
             </div>
           </div>
