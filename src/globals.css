@@ -100,14 +100,6 @@
   }
 }
 
-/* Keyframes for background position slide used by HoleBackground */
-@keyframes bg-slide {
-  from { background-position: 0% 100%; }
-  to   { background-position: 0% 300%; }
-}
-
-/* The animation is applied via Tailwind arbitrary value: [animation:bg-slide_5s_linear_infinite] */
-
 /* Martian Mono utility */
 .font-martian {
   font-family: "Martian Mono", monospace;
