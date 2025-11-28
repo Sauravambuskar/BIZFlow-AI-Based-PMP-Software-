@@ -17,6 +17,7 @@ import AccessDenied from "@/pages/AccessDenied";
 import { SupabaseSessionProvider } from "@/context/supabase-session";
 import AuthenticatedRoute from "@/components/routing/AuthenticatedRoute";
 import Login from "@/pages/Login";
+import BlackHole from "./pages/BlackHole";
 
 function App() {
   return (
@@ -94,6 +95,8 @@ function App() {
                 </AuthenticatedRoute>
               }
             />
+
+            <Route path="/black-hole" element={<BlackHole />} />
 
             {/* Optional direct route for the AccessDenied page */}
             <Route path="/no-access" element={<AccessDenied />} />

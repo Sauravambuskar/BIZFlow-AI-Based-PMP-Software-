@@ -6,6 +6,8 @@ import KpiCard from "@/components/dashboard/KpiCard";
 import FinanceChart from "@/components/dashboard/FinanceChart";
 import RecentActivity from "@/components/dashboard/RecentActivity";
 import QuickActions from "@/components/dashboard/QuickActions";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 import { TrendingUp, TrendingDown, Wallet, TimerReset } from "lucide-react";
 
 const Index: React.FC = () => {
@@ -60,6 +62,12 @@ const Index: React.FC = () => {
           <RecentActivity />
           <QuickActions />
         </div>
+      </div>
+
+      <div className="mt-6">
+        <Link to="/black-hole">
+          <Button variant="default">View Creative Black Hole</Button>
+        </Link>
       </div>
     </AppLayout>
   );
